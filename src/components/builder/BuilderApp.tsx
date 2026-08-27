@@ -9,7 +9,7 @@ import { PriceDisplay } from "@/components/builder/PriceDisplay";
 import { NavigationButtons } from "@/components/builder/NavigationButtons";
 import { formatARS } from "@/lib/pricing";
 import { createQuoteAction } from "@/app/actions/quotes";
-import type { BuilderData } from "@/lib/types";
+import type { BuilderData, FillingOption } from "@/lib/types";
 
 const CakeCanvas = dynamic(() => import("@/components/cake/CakeCanvas").then((m) => m.CakeCanvas), {
   ssr: false,
@@ -40,8 +40,12 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
 
   const selectedSponge = useMemo(() => sponges.find((s) => s.id === spongeId) ?? null, [sponges, spongeId]);
+  // Se mapea (no se filtra) para preservar el orden y permitir el mismo relleno en varias capas.
   const selectedFillings = useMemo(
-    () => fillings.filter((f) => fillingIds.includes(f.id)),
+    () =>
+      fillingIds
+        .map((id) => fillings.find((f) => f.id === id))
+        .filter((f): f is FillingOption => Boolean(f)),
     [fillings, fillingIds]
   );
   const selectedDecoration = useMemo(
@@ -62,11 +66,19 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
     setStep(next);
   }
 
-  function toggleFilling(id: string) {
+  function setLayerCount(count: number) {
     setFillingIds((prev) => {
-      if (prev.includes(id)) return prev.filter((f) => f !== id);
-      if (prev.length >= maxFillings) return prev;
-      return [...prev, id];
+      const next = prev.slice(0, count);
+      while (next.length < count) next.push(fillings[0]?.id ?? "");
+      return next;
+    });
+  }
+
+  function updateFillingLayer(index: number, id: string) {
+    setFillingIds((prev) => {
+      const next = [...prev];
+      next[index] = id;
+      return next;
     });
   }
 
@@ -120,6 +132,12 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
       <div className="grid content-start items-start gap-6 md:flex-1 md:grid-cols-[1.1fr_1fr] md:items-start">
         <div className="md:sticky md:top-8 flex flex-col items-center">
           {cake}
+          {step > 0 && (
+            <p className="mt-2 max-w-xs text-center text-[11px] leading-snug text-cioco-green/50">
+              La torta 3D es ilustrativa: sirve para armar tu pedido y tener un presupuesto aproximado. La torta
+              real puede variar en su terminación.
+            </p>
+          )}
           {step > 0 && step < 4 && <StepIndicator step={step} total={3} />}
         </div>
 
@@ -169,24 +187,68 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
             {step === 2 && (
               <StepPanel key="filling">
                 <h2 className="font-serif text-xl text-cioco-brown">¿Qué rellenos preferís?</h2>
-                <p className="mt-1 text-sm text-cioco-green/60">Seleccioná 1, 2 o {maxFillings} rellenos</p>
+                <p className="mt-1 text-sm text-cioco-green/60">
+                  Elegí cuántas capas querés — podés repetir el mismo relleno en más de una.
+                </p>
                 {fillings.length === 0 ? (
                   <EmptyState text="No hay rellenos disponibles actualmente." />
                 ) : (
-                  <div className="mt-4 flex flex-col gap-2">
-                    {fillings.map((f) => (
-                      <OptionCard
-                        key={f.id}
-                        multi
-                        name={f.name}
-                        price={f.price}
-                        colorHex={f.colorHex}
-                        selected={fillingIds.includes(f.id)}
-                        disabled={fillingIds.length >= maxFillings}
-                        onClick={() => toggleFilling(f.id)}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <div className="mt-3 flex gap-2">
+                      {Array.from({ length: maxFillings }, (_, i) => i + 1).map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setLayerCount(n)}
+                          className={`flex-1 rounded-full py-2.5 text-sm font-semibold transition ${
+                            fillingIds.length === n
+                              ? "bg-cioco-green text-cioco-white"
+                              : "bg-cioco-green/10 text-cioco-green hover:bg-cioco-green/15"
+                          }`}
+                        >
+                          {n} {n === 1 ? "capa" : "capas"}
+                        </button>
+                      ))}
+                    </div>
+
+                    {fillingIds.length > 0 && (
+                      <div className="mt-4 flex flex-col gap-2">
+                        {fillingIds.map((id, i) => {
+                          const current = fillings.find((f) => f.id === id);
+                          return (
+                            <div
+                              key={i}
+                              className="flex items-center gap-3 rounded-2xl border-2 border-transparent bg-cioco-white px-4 py-3 shadow-sm"
+                            >
+                              <span
+                                className="h-9 w-9 shrink-0 rounded-full border border-black/10"
+                                style={{ backgroundColor: current?.colorHex ?? "#EADFC0" }}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <span className="block text-[10px] font-semibold uppercase tracking-wide text-cioco-green/50">
+                                  Capa {i + 1}
+                                </span>
+                                <select
+                                  value={id}
+                                  onChange={(e) => updateFillingLayer(i, e.target.value)}
+                                  className="w-full truncate bg-transparent text-sm font-medium text-cioco-green outline-none"
+                                >
+                                  {fillings.map((f) => (
+                                    <option key={f.id} value={f.id}>
+                                      {f.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <span className="shrink-0 text-sm font-semibold text-cioco-brown">
+                                {formatARS(current?.price ?? null)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 )}
               </StepPanel>
             )}
@@ -260,8 +322,8 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
                     <p className="text-xs font-semibold uppercase tracking-wide text-cioco-green/50">
                       Rellenos
                     </p>
-                    {selectedFillings.map((f) => (
-                      <div key={f.id} className="mt-1 flex items-center justify-between text-sm">
+                    {selectedFillings.map((f, i) => (
+                      <div key={`${f.id}-${i}`} className="mt-1 flex items-center justify-between text-sm">
                         <span className="text-cioco-green">{f.name}</span>
                         <span className="font-medium text-cioco-brown">{formatARS(f.price)}</span>
                       </div>

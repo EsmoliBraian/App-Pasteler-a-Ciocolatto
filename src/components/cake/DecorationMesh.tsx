@@ -27,6 +27,9 @@ const STYLE_COLOR: Record<string, string> = {
 
 const CAP_Y_OFFSET = 0.05;
 const DEFAULT_FLATNESS = 0.34;
+/** Escala XZ del domo: mayor que el bulto del relleno (1.04) para que la
+ * cobertura lo tape por completo en vez de dejarlo asomar. */
+const CAP_XZ_SCALE = 1.09;
 
 function ring(count: number, radius: number) {
   return Array.from({ length: count }, (_, i) => {
@@ -36,9 +39,11 @@ function ring(count: number, radius: number) {
 }
 
 /** Altura de la superficie del domo (Cap) en un radio horizontal dado, para
- * poder apoyar toppings ENCIMA de la cúpula en vez de enterrarlos dentro. */
+ * poder apoyar toppings ENCIMA de la cúpula en vez de enterrarlos dentro.
+ * Tiene en cuenta el escalado XZ del domo (CAP_XZ_SCALE). */
 function domeSurfaceY(radiusFromCenter: number, flatness: number) {
-  const rr = Math.max(0, CAKE_RADIUS * CAKE_RADIUS - radiusFromCenter * radiusFromCenter);
+  const localR = radiusFromCenter / CAP_XZ_SCALE;
+  const rr = Math.max(0, CAKE_RADIUS * CAKE_RADIUS - localR * localR);
   return CAP_Y_OFFSET + flatness * Math.sqrt(rr);
 }
 
@@ -55,7 +60,7 @@ interface CapMeshProps {
 
 function CapMesh({ topY, flatness, roughness, map, bumpMap, bumpScale = 0.04, physical, fallbackColor }: CapMeshProps) {
   return (
-    <mesh position={[0, topY + CAP_Y_OFFSET, 0]} scale={[1.05, flatness, 1.05]} castShadow receiveShadow>
+    <mesh position={[0, topY + CAP_Y_OFFSET, 0]} scale={[CAP_XZ_SCALE, flatness, CAP_XZ_SCALE]} castShadow receiveShadow>
       <sphereGeometry args={[CAKE_RADIUS, 48, 30]} />
       {physical ? (
         <meshPhysicalMaterial
@@ -119,7 +124,7 @@ interface SideWallProps {
 function SideWall({ topY, color, map, bumpMap, bumpScale = 0.02, roughness = 0.85, physical }: SideWallProps) {
   return (
     <mesh position={[0, topY / 2, 0]} castShadow receiveShadow>
-      <cylinderGeometry args={[CAKE_RADIUS * 1.02, CAKE_RADIUS * 1.02, topY + 0.08, 56]} />
+      <cylinderGeometry args={[CAKE_RADIUS * 1.09, CAKE_RADIUS * 1.09, topY + 0.08, 56]} />
       {physical ? (
         <meshPhysicalMaterial
           color={map ? "#ffffff" : color}
@@ -376,7 +381,7 @@ function RusticCovering({ topY, color }: { topY: number; color: string }) {
       Array.from({ length: 16 }, (_, i) => {
         const angle = (i / 16) * Math.PI * 2 + Math.sin(i) * 0.3;
         const heightFrac = 0.25 + ((i * 37) % 100) / 130;
-        const r = CAKE_RADIUS * (1.0 + 0.04 * Math.sin(i * 2.1));
+        const r = CAKE_RADIUS * (1.09 + 0.04 * Math.sin(i * 2.1));
         return {
           x: Math.cos(angle) * r,
           z: Math.sin(angle) * r,
@@ -391,7 +396,7 @@ function RusticCovering({ topY, color }: { topY: number; color: string }) {
   return (
     <>
       <mesh position={[0, topY / 2, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[CAKE_RADIUS * 1.03, CAKE_RADIUS * 1.03, topY + 0.12, 48]} />
+        <cylinderGeometry args={[CAKE_RADIUS * 1.09, CAKE_RADIUS * 1.09, topY + 0.12, 48]} />
         <meshStandardMaterial color="#ffffff" map={map} bumpMap={bumpMap} bumpScale={0.04} roughness={0.95} />
       </mesh>
       {blobs.map((b, i) => (
@@ -418,7 +423,7 @@ function PartialCoverage({
   return (
     <>
       <mesh position={[0, topY - coverageHeight / 2 + 0.06, 0]} castShadow>
-        <cylinderGeometry args={[CAKE_RADIUS * 1.02, CAKE_RADIUS * 1.02, coverageHeight, 48, 1, true]} />
+        <cylinderGeometry args={[CAKE_RADIUS * 1.07, CAKE_RADIUS * 1.07, coverageHeight, 48, 1, true]} />
         <meshStandardMaterial color="#FFFDF6" roughness={0.7} transparent opacity={0.55} side={DoubleSide} />
       </mesh>
       <CapCream color="#FFFDF6" topY={topY} flatness={flatness} />
