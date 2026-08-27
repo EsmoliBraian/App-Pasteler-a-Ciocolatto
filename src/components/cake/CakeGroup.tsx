@@ -48,6 +48,7 @@ export function CakeGroup({ sponge, fillings, decoration, spinToken }: CakeGroup
         <FillingMesh
           key={`filling-${filling.id}-${i}`}
           color={filling.colorHex}
+          visualStyle={filling.visualStyle}
           height={FILLING_HEIGHT}
           positionY={cursor + FILLING_HEIGHT / 2}
         />

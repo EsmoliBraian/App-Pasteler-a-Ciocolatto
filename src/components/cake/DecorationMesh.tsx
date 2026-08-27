@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { animated, useSpring } from "@react-spring/three";
 import { DoubleSide, type Mesh } from "three";
 import { CAKE_RADIUS } from "./constants";
+import { useCocoaDustTexture, useGanacheTexture, useRusticTexture, useSwirlCreamTexture, useSwirlSpiralTexture } from "./textures";
 
 const STYLE_COLOR: Record<string, string> = {
   meringue: "#FBF1D8",
@@ -41,29 +42,66 @@ function domeSurfaceY(radiusFromCenter: number, flatness: number) {
   return CAP_Y_OFFSET + flatness * Math.sqrt(rr);
 }
 
-function Cap({
-  color,
-  topY,
-  glossy,
-  roughness = 0.6,
-  flatness = DEFAULT_FLATNESS,
-}: {
-  color: string;
+interface CapMeshProps {
   topY: number;
-  glossy?: boolean;
-  roughness?: number;
-  flatness?: number;
-}) {
+  flatness: number;
+  roughness: number;
+  map?: ReturnType<typeof useSwirlCreamTexture>["map"];
+  bumpMap?: ReturnType<typeof useSwirlCreamTexture>["bumpMap"];
+  bumpScale?: number;
+  physical?: boolean;
+  fallbackColor: string;
+}
+
+function CapMesh({ topY, flatness, roughness, map, bumpMap, bumpScale = 0.04, physical, fallbackColor }: CapMeshProps) {
   return (
-    <mesh position={[0, topY + CAP_Y_OFFSET, 0]} scale={[1.05, flatness, 1.05]} castShadow>
-      <sphereGeometry args={[CAKE_RADIUS, 40, 24]} />
-      {glossy ? (
-        <meshPhysicalMaterial color={color} roughness={0.18} clearcoat={1} clearcoatRoughness={0.15} />
+    <mesh position={[0, topY + CAP_Y_OFFSET, 0]} scale={[1.05, flatness, 1.05]} castShadow receiveShadow>
+      <sphereGeometry args={[CAKE_RADIUS, 48, 30]} />
+      {physical ? (
+        <meshPhysicalMaterial
+          color={map ? "#ffffff" : fallbackColor}
+          map={map}
+          bumpMap={bumpMap}
+          bumpScale={bumpScale}
+          roughness={0.18}
+          clearcoat={1}
+          clearcoatRoughness={0.18}
+        />
       ) : (
-        <meshStandardMaterial color={color} roughness={roughness} />
+        <meshStandardMaterial
+          color={map ? "#ffffff" : fallbackColor}
+          map={map}
+          bumpMap={bumpMap}
+          bumpScale={bumpScale}
+          roughness={roughness}
+        />
       )}
     </mesh>
   );
+}
+
+/** Cobertura tipo crema/chantilly con "pétalos" de manga pastelera. */
+function CapCream({ color, topY, flatness = DEFAULT_FLATNESS }: { color: string; topY: number; flatness?: number }) {
+  const { map, bumpMap } = useSwirlCreamTexture(color);
+  return <CapMesh topY={topY} flatness={flatness} roughness={0.55} map={map} bumpMap={bumpMap} bumpScale={0.05} fallbackColor={color} />;
+}
+
+/** Cobertura de ganache brillante con reflejo direccional. */
+function CapGanache({ color, topY, flatness = DEFAULT_FLATNESS }: { color: string; topY: number; flatness?: number }) {
+  const { map, bumpMap } = useGanacheTexture(color);
+  return <CapMesh topY={topY} flatness={flatness} roughness={0.18} map={map} bumpMap={bumpMap} bumpScale={0.015} physical fallbackColor={color} />;
+}
+
+/** Cobertura con espiral de caramelo/dulce de leche vista desde arriba. */
+function CapSpiral({ color, topY, flatness = DEFAULT_FLATNESS }: { color: string; topY: number; flatness?: number }) {
+  const { map, bumpMap } = useSwirlSpiralTexture(color);
+  return <CapMesh topY={topY} flatness={flatness} roughness={0.5} map={map} bumpMap={bumpMap} bumpScale={0.035} fallbackColor={color} />;
+}
+
+/** Cobertura espolvoreada de cacao (tiramisú). */
+function CapCocoa({ color, topY, flatness = DEFAULT_FLATNESS }: { color: string; topY: number; flatness?: number }) {
+  const { map } = useCocoaDustTexture(color);
+  return <CapMesh topY={topY} flatness={flatness} roughness={1} map={map} fallbackColor={color} />;
 }
 
 function Dollops({
@@ -87,10 +125,16 @@ function Dollops({
   return (
     <>
       {points.map((p, i) => (
-        <mesh key={i} position={[p.x, baseY + size * 0.85 + Math.sin(i) * 0.01, p.z]} castShadow>
-          <sphereGeometry args={[size, 20, 16]} />
-          <meshStandardMaterial color={color} roughness={0.45} />
-        </mesh>
+        <group key={i} position={[p.x, baseY + size * 0.85 + Math.sin(i) * 0.01, p.z]} rotation={[0, (i * Math.PI) / 3, 0]}>
+          <mesh castShadow>
+            <coneGeometry args={[size * 0.72, size * 1.7, 8]} />
+            <meshStandardMaterial color={color} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, -size * 0.3, 0]} castShadow>
+            <sphereGeometry args={[size * 0.78, 16, 12]} />
+            <meshStandardMaterial color={color} roughness={0.4} />
+          </mesh>
+        </group>
       ))}
     </>
   );
@@ -248,7 +292,8 @@ function ChocoShavings({ topY, count = 14, capFlatness }: { topY: number; count?
   );
 }
 
-function RusticTexture({ topY, color }: { topY: number; color: string }) {
+function RusticCovering({ topY, color }: { topY: number; color: string }) {
+  const { map, bumpMap } = useRusticTexture(color);
   const blobs = useMemo(
     () =>
       Array.from({ length: 16 }, (_, i) => {
@@ -270,7 +315,7 @@ function RusticTexture({ topY, color }: { topY: number; color: string }) {
     <>
       <mesh position={[0, topY / 2, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[CAKE_RADIUS * 1.03, CAKE_RADIUS * 1.03, topY + 0.12, 48]} />
-        <meshStandardMaterial color={color} roughness={0.95} />
+        <meshStandardMaterial color="#ffffff" map={map} bumpMap={bumpMap} bumpScale={0.04} roughness={0.95} />
       </mesh>
       {blobs.map((b, i) => (
         <mesh key={i} position={[b.x, b.y, b.z]} rotation={[b.rot, b.rot * 0.6, 0]} scale={b.scale} castShadow>
@@ -299,7 +344,7 @@ function PartialCoverage({
         <cylinderGeometry args={[CAKE_RADIUS * 1.02, CAKE_RADIUS * 1.02, coverageHeight, 48, 1, true]} />
         <meshStandardMaterial color="#FFFDF6" roughness={0.7} transparent opacity={0.55} side={DoubleSide} />
       </mesh>
-      <Cap color="#FFFDF6" topY={topY} roughness={0.6} flatness={flatness} />
+      <CapCream color="#FFFDF6" topY={topY} flatness={flatness} />
     </>
   );
 }
@@ -308,6 +353,7 @@ function PartialCoverage({
 function CrepeStack({ topY }: { topY: number }) {
   const layers = 5;
   const layerHeight = 0.055;
+  const capTopY = topY + layers * layerHeight;
   return (
     <>
       {Array.from({ length: layers }).map((_, i) => (
@@ -316,8 +362,8 @@ function CrepeStack({ topY }: { topY: number }) {
           <meshStandardMaterial color={i % 2 === 0 ? "#E8C687" : "#D9AE64"} roughness={0.7} />
         </mesh>
       ))}
-      <Cap color="#F3E4B8" topY={topY + layers * layerHeight} roughness={0.6} flatness={0.28} />
-      <Drips color="#A9642B" topY={topY + layers * layerHeight + 0.02} />
+      <CapCream color="#F3E4B8" topY={capTopY} flatness={0.28} />
+      <Drips color="#A9642B" topY={capTopY + 0.02} />
     </>
   );
 }
@@ -361,7 +407,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       {/* Clásicas */}
       {style === "selvanegra" && (
         <>
-          <Cap color={color} topY={topY} />
+          <CapCream color={color} topY={topY} />
           <Dollops color={color} topY={topY} count={6} radiusFactor={0.9} size={0.1} capFlatness={DEFAULT_FLATNESS} />
           <ChocoShavings topY={topY} capFlatness={DEFAULT_FLATNESS} />
           <TopCluster colors={["#C1272D", "#E23B44"]} topY={topY} count={9} spread={0.4} size={0.11} capFlatness={DEFAULT_FLATNESS} />
@@ -369,7 +415,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       )}
       {style === "nuez" && (
         <>
-          <Cap color={color} topY={topY} roughness={0.5} />
+          <CapCream color={color} topY={topY} />
           <SpeckRing
             color="#8A5A32"
             topY={topY}
@@ -384,7 +430,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       )}
       {style === "franui" && (
         <>
-          <Cap color={color} topY={topY} glossy />
+          <CapGanache color={color} topY={topY} />
           <SpeckRing
             color="#7A1F2B"
             topY={topY}
@@ -404,10 +450,10 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
           <TopCluster colors={["#8A5A32", "#6E4423"]} topY={topY} count={6} spread={0.25} size={0.08} capFlatness={0.2} />
         </>
       )}
-      {style === "choconutella" && <Cap color={color} topY={topY} glossy />}
+      {style === "choconutella" && <CapGanache color={color} topY={topY} />}
       {style === "chocotorta" && (
         <>
-          <Cap color={color} topY={topY} roughness={0.55} />
+          <CapSpiral color={color} topY={topY} />
           <SpeckRing
             color="#2E1B12"
             topY={topY}
@@ -419,10 +465,10 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
           />
         </>
       )}
-      {style === "matilda" && <RusticTexture topY={topY} color={color} />}
+      {style === "matilda" && <RusticCovering topY={topY} color={color} />}
       {style === "chaja" && (
         <>
-          <Cap color={color} topY={topY} />
+          <CapCream color={color} topY={topY} />
           <Dollops color={color} topY={topY} count={10} radiusFactor={0.86} size={0.1} capFlatness={DEFAULT_FLATNESS} />
           <mesh position={[0, topY + domeSurfaceY(0, DEFAULT_FLATNESS) + 0.1, 0]} castShadow>
             <sphereGeometry args={[0.16, 16, 12]} />
@@ -432,7 +478,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       )}
       {style === "tortabrownie" && (
         <>
-          <Cap color={color} topY={topY} roughness={0.5} />
+          <CapCream color={color} topY={topY} />
           <SpeckRing
             color="#2E1B12"
             topY={topY}
@@ -452,7 +498,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       )}
       {style === "tiramisu" && (
         <>
-          <Cap color={color} topY={topY} roughness={1} flatness={0.16} />
+          <CapCocoa color={color} topY={topY} flatness={0.16} />
           <TopCluster
             colors={["#2E1B12", "#3B2418"]}
             topY={topY}
@@ -467,15 +513,15 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       {/* Especiales / frutas */}
       {style === "meringue" && (
         <>
-          <Cap color={color} topY={topY} />
+          <CapCream color={color} topY={topY} />
           <Peaks topY={topY} />
         </>
       )}
-      {style === "rustic" && <RusticTexture topY={topY} color={color} />}
+      {style === "rustic" && <RusticCovering topY={topY} color={color} />}
       {style === "seminaked" && <PartialCoverage topY={topY} />}
       {style === "dripcake" && (
         <>
-          <Cap color={color} topY={topY} glossy />
+          <CapGanache color={color} topY={topY} />
           <Drips color={color} topY={topY} long />
         </>
       )}

@@ -150,6 +150,7 @@ const productSeeds: ProductSeed[] = [
     type: "FILLING",
     name: "Dulce de leche",
     colorHex: "#A9642B",
+    visualStyle: "dulcedeleche",
     marginPercent: 45,
     sortOrder: 1,
     recipe: [{ ingredient: "Dulce de leche repostero", quantity: 300 }],
@@ -158,6 +159,7 @@ const productSeeds: ProductSeed[] = [
     type: "FILLING",
     name: "Nutella",
     colorHex: "#4A2A1D",
+    visualStyle: "nutella",
     marginPercent: 45,
     sortOrder: 2,
     recipe: [{ ingredient: "Nutella", quantity: 250 }],
@@ -166,6 +168,7 @@ const productSeeds: ProductSeed[] = [
     type: "FILLING",
     name: "Frutos rojos",
     colorHex: "#B33951",
+    visualStyle: "frutosrojos",
     marginPercent: 45,
     sortOrder: 3,
     recipe: [
@@ -177,6 +180,7 @@ const productSeeds: ProductSeed[] = [
     type: "FILLING",
     name: "Crema chantilly",
     colorHex: "#FBF6ED",
+    visualStyle: "chantilly",
     marginPercent: 45,
     sortOrder: 4,
     recipe: [
@@ -188,6 +192,7 @@ const productSeeds: ProductSeed[] = [
     type: "FILLING",
     name: "Chocolate",
     colorHex: "#3B2418",
+    visualStyle: "chocolate",
     marginPercent: 45,
     sortOrder: 5,
     recipe: [
@@ -199,6 +204,7 @@ const productSeeds: ProductSeed[] = [
     type: "FILLING",
     name: "Limón",
     colorHex: "#EEE07A",
+    visualStyle: "limon",
     marginPercent: 45,
     sortOrder: 6,
     recipe: [
