@@ -26,9 +26,13 @@
   --font-serif: var(--font-display);
 }
 
+html,
 body {
   background: var(--background);
   color: var(--foreground);
+  /* Salvaguarda: nada debería poder generar scroll horizontal en la página. */
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 ::selection {

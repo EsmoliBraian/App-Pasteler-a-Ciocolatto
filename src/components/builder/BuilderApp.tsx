@@ -127,9 +127,9 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pb-6 pt-6 md:px-8">
-      <div className="grid content-start items-start gap-6 md:flex-1 md:grid-cols-[1.1fr_1fr] md:items-start">
-        <div className="md:sticky md:top-8 flex flex-col items-center">
+    <div className="mx-auto flex w-full max-w-5xl min-w-0 flex-1 flex-col overflow-x-hidden px-4 pb-6 pt-6 md:px-8">
+      <div className="grid min-w-0 content-start items-start gap-6 md:flex-1 md:grid-cols-[1.1fr_1fr] md:items-start">
+        <div className="min-w-0 md:sticky md:top-8 flex flex-col items-center">
           {cake}
           {step > 0 && (
             <p className="mt-2 max-w-xs text-center text-[11px] leading-snug text-cioco-green/50">
@@ -149,7 +149,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
           )}
         </div>
 
-        <div className="flex flex-col gap-5">
+        <div className="min-w-0 flex flex-col gap-5">
           <AnimatePresence mode="wait">
             {step === 0 && (
               <StepPanel key="intro">
