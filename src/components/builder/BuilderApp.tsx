@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { CakeStage } from "@/components/cake/CakeStage";
-import { CakePreview } from "@/components/cake/CakePreview";
 import { StepIndicator } from "@/components/builder/StepIndicator";
 import { OptionCard } from "@/components/builder/OptionCard";
 import { PriceDisplay } from "@/components/builder/PriceDisplay";
@@ -11,6 +10,11 @@ import { NavigationButtons } from "@/components/builder/NavigationButtons";
 import { formatARS } from "@/lib/pricing";
 import { createQuoteAction } from "@/app/actions/quotes";
 import type { BuilderData } from "@/lib/types";
+
+const CakeCanvas = dynamic(() => import("@/components/cake/CakeCanvas").then((m) => m.CakeCanvas), {
+  ssr: false,
+  loading: () => <div className="h-72 w-full animate-pulse rounded-3xl bg-cioco-green/5 sm:h-80 md:h-[420px]" />,
+});
 
 const DECORATION_TABS: { key: string; label: string }[] = [
   { key: "CLASSIC", label: "Clásicas" },
@@ -108,9 +112,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
   }
 
   const cake = (
-    <CakeStage spinToken={spinToken}>
-      <CakePreview sponge={selectedSponge} fillings={selectedFillings} decoration={selectedDecoration} />
-    </CakeStage>
+    <CakeCanvas sponge={selectedSponge} fillings={selectedFillings} decoration={selectedDecoration} spinToken={spinToken} />
   );
 
   return (
