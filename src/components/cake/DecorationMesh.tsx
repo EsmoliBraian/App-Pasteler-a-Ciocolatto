@@ -2,9 +2,8 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import { animated, useSpring } from "@react-spring/three";
-import type { Group } from "three";
+import { CatmullRomCurve3, Vector3, type Group } from "three";
 import { CAKE_RADIUS } from "./constants";
 import { useCocoaDustTexture, useGanacheTexture, useRusticTexture, useSwirlCreamTexture, useSwirlSpiralTexture } from "./textures";
 
@@ -389,11 +388,43 @@ function RusticCovering({ topY, color }: { topY: number; color: string }) {
   );
 }
 
+/** Signo de pregunta 3D real: el gancho es un tubo que sigue una curva a
+ * mano, más una esfera para el punto. Nada de HTML/texto plano. */
+function QuestionMark3D() {
+  const hookCurve = useMemo(
+    () =>
+      new CatmullRomCurve3([
+        new Vector3(-0.075, 0.16, 0),
+        new Vector3(0.03, 0.19, 0.01),
+        new Vector3(0.12, 0.14, 0.02),
+        new Vector3(0.11, 0.04, 0.01),
+        new Vector3(0.03, -0.02, 0),
+        new Vector3(0.0, -0.06, 0),
+        new Vector3(0.0, -0.15, 0),
+      ]),
+    []
+  );
+
+  return (
+    <group>
+      <mesh castShadow>
+        <tubeGeometry args={[hookCurve, 40, 0.022, 10, false]} />
+        <meshStandardMaterial color="#C9A24B" emissive="#8a6a26" emissiveIntensity={0.35} roughness={0.3} metalness={0.35} />
+      </mesh>
+      <mesh position={[0, -0.24, 0]} castShadow>
+        <sphereGeometry args={[0.026, 16, 14]} />
+        <meshStandardMaterial color="#C9A24B" emissive="#8a6a26" emissiveIntensity={0.35} roughness={0.3} metalness={0.35} />
+      </mesh>
+    </group>
+  );
+}
+
 function CustomMarker({ topY }: { topY: number }) {
   const floatRef = useRef<Group>(null);
   useFrame((state) => {
     if (!floatRef.current) return;
     floatRef.current.position.y = topY + 0.55 + Math.sin(state.clock.elapsedTime * 1.6) * 0.07;
+    floatRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.7) * 0.35;
   });
 
   return (
@@ -402,12 +433,8 @@ function CustomMarker({ topY }: { topY: number }) {
         <torusGeometry args={[CAKE_RADIUS * 0.75, 0.02, 8, 48]} />
         <meshStandardMaterial color="#C9A24B" transparent opacity={0.55} roughness={0.4} />
       </mesh>
-      <group ref={floatRef} position={[0, topY + 0.55, 0]}>
-        <Html center>
-          <div className="grid h-10 w-10 place-items-center rounded-full border-2 border-cioco-gold bg-cioco-white shadow-md">
-            <span className="font-serif text-xl font-bold text-cioco-gold">?</span>
-          </div>
-        </Html>
+      <group ref={floatRef} position={[0, topY + 0.55, 0]} scale={1.6}>
+        <QuestionMark3D />
       </group>
     </group>
   );

@@ -269,7 +269,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
                     <button
                       key={tab.key}
                       onClick={() => selectDecorationTab(tab.key)}
-                      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 py-1.5 text-center text-xs font-semibold leading-none transition ${
                         decorationTab === tab.key
                           ? "bg-cioco-green text-cioco-white"
                           : "text-cioco-green/70 hover:text-cioco-green"
