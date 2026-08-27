@@ -104,6 +104,83 @@ function CapCocoa({ color, topY, flatness = DEFAULT_FLATNESS }: { color: string;
   return <CapMesh topY={topY} flatness={flatness} roughness={1} map={map} fallbackColor={color} />;
 }
 
+interface SideWallProps {
+  topY: number;
+  color: string;
+  map?: ReturnType<typeof useSwirlCreamTexture>["map"];
+  bumpMap?: ReturnType<typeof useSwirlCreamTexture>["bumpMap"];
+  bumpScale?: number;
+  roughness?: number;
+  physical?: boolean;
+}
+
+/** Pared lateral que tapa bizcochuelo y relleno para que la torta se vea
+ * terminada, en vez de mostrar las capas internas debajo de un domo. */
+function SideWall({ topY, color, map, bumpMap, bumpScale = 0.02, roughness = 0.85, physical }: SideWallProps) {
+  return (
+    <mesh position={[0, topY / 2, 0]} castShadow receiveShadow>
+      <cylinderGeometry args={[CAKE_RADIUS * 1.02, CAKE_RADIUS * 1.02, topY + 0.08, 56]} />
+      {physical ? (
+        <meshPhysicalMaterial
+          color={map ? "#ffffff" : color}
+          map={map}
+          bumpMap={bumpMap}
+          bumpScale={bumpScale}
+          roughness={0.22}
+          clearcoat={0.9}
+          clearcoatRoughness={0.25}
+        />
+      ) : (
+        <meshStandardMaterial color={map ? "#ffffff" : color} map={map} bumpMap={bumpMap} bumpScale={bumpScale} roughness={roughness} />
+      )}
+    </mesh>
+  );
+}
+
+/** Cobertura completa (pared + domo) de crema/chantilly: tapa toda la torta. */
+function FullCoverCream({ color, topY, flatness = DEFAULT_FLATNESS }: { color: string; topY: number; flatness?: number }) {
+  const side = useRusticTexture(color);
+  return (
+    <>
+      <SideWall topY={topY} color={color} map={side.map} bumpMap={side.bumpMap} bumpScale={0.012} roughness={0.6} />
+      <CapCream color={color} topY={topY} flatness={flatness} />
+    </>
+  );
+}
+
+/** Cobertura completa de ganache brillante: pared y domo con el mismo brillo. */
+function FullCoverGanache({ color, topY, flatness = DEFAULT_FLATNESS }: { color: string; topY: number; flatness?: number }) {
+  const side = useGanacheTexture(color);
+  return (
+    <>
+      <SideWall topY={topY} color={color} map={side.map} bumpMap={side.bumpMap} bumpScale={0.01} physical />
+      <CapGanache color={color} topY={topY} flatness={flatness} />
+    </>
+  );
+}
+
+/** Cobertura completa con espiral arriba y pared lisa color caramelo. */
+function FullCoverSpiral({ color, topY, flatness = DEFAULT_FLATNESS }: { color: string; topY: number; flatness?: number }) {
+  const side = useRusticTexture(color);
+  return (
+    <>
+      <SideWall topY={topY} color={color} map={side.map} bumpMap={side.bumpMap} bumpScale={0.01} roughness={0.5} />
+      <CapSpiral color={color} topY={topY} flatness={flatness} />
+    </>
+  );
+}
+
+/** Cobertura completa espolvoreada de cacao (tapa y pared). */
+function FullCoverCocoa({ color, topY, flatness = DEFAULT_FLATNESS }: { color: string; topY: number; flatness?: number }) {
+  const side = useCocoaDustTexture(color);
+  return (
+    <>
+      <SideWall topY={topY} color={color} map={side.map} roughness={1} />
+      <CapCocoa color={color} topY={topY} flatness={flatness} />
+    </>
+  );
+}
+
 function Dollops({
   color,
   topY,
@@ -407,7 +484,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       {/* Clásicas */}
       {style === "selvanegra" && (
         <>
-          <CapCream color={color} topY={topY} />
+          <FullCoverCream color={color} topY={topY} />
           <Dollops color={color} topY={topY} count={6} radiusFactor={0.9} size={0.1} capFlatness={DEFAULT_FLATNESS} />
           <ChocoShavings topY={topY} capFlatness={DEFAULT_FLATNESS} />
           <TopCluster colors={["#C1272D", "#E23B44"]} topY={topY} count={9} spread={0.4} size={0.11} capFlatness={DEFAULT_FLATNESS} />
@@ -415,7 +492,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       )}
       {style === "nuez" && (
         <>
-          <CapCream color={color} topY={topY} />
+          <FullCoverCream color={color} topY={topY} />
           <SpeckRing
             color="#8A5A32"
             topY={topY}
@@ -430,7 +507,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       )}
       {style === "franui" && (
         <>
-          <CapGanache color={color} topY={topY} />
+          <FullCoverGanache color={color} topY={topY} />
           <SpeckRing
             color="#7A1F2B"
             topY={topY}
@@ -450,10 +527,10 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
           <TopCluster colors={["#8A5A32", "#6E4423"]} topY={topY} count={6} spread={0.25} size={0.08} capFlatness={0.2} />
         </>
       )}
-      {style === "choconutella" && <CapGanache color={color} topY={topY} />}
+      {style === "choconutella" && <FullCoverGanache color={color} topY={topY} />}
       {style === "chocotorta" && (
         <>
-          <CapSpiral color={color} topY={topY} />
+          <FullCoverSpiral color={color} topY={topY} />
           <SpeckRing
             color="#2E1B12"
             topY={topY}
@@ -468,7 +545,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       {style === "matilda" && <RusticCovering topY={topY} color={color} />}
       {style === "chaja" && (
         <>
-          <CapCream color={color} topY={topY} />
+          <FullCoverCream color={color} topY={topY} />
           <Dollops color={color} topY={topY} count={10} radiusFactor={0.86} size={0.1} capFlatness={DEFAULT_FLATNESS} />
           <mesh position={[0, topY + domeSurfaceY(0, DEFAULT_FLATNESS) + 0.1, 0]} castShadow>
             <sphereGeometry args={[0.16, 16, 12]} />
@@ -478,7 +555,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       )}
       {style === "tortabrownie" && (
         <>
-          <CapCream color={color} topY={topY} />
+          <FullCoverCream color={color} topY={topY} />
           <SpeckRing
             color="#2E1B12"
             topY={topY}
@@ -492,13 +569,14 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       )}
       {style === "frutosrojostop" && (
         <>
-          <Dollops color="#FFFDF6" topY={topY} count={10} radiusFactor={0.88} size={0.1} />
-          <TopCluster colors={BERRY_COLORS} topY={topY} count={22} spread={0.55} size={0.1} />
+          <FullCoverCream color="#FFFDF6" topY={topY} />
+          <Dollops color="#FFFDF6" topY={topY} count={10} radiusFactor={0.88} size={0.1} capFlatness={DEFAULT_FLATNESS} />
+          <TopCluster colors={BERRY_COLORS} topY={topY} count={22} spread={0.55} size={0.1} capFlatness={DEFAULT_FLATNESS} />
         </>
       )}
       {style === "tiramisu" && (
         <>
-          <CapCocoa color={color} topY={topY} flatness={0.16} />
+          <FullCoverCocoa color={color} topY={topY} flatness={0.16} />
           <TopCluster
             colors={["#2E1B12", "#3B2418"]}
             topY={topY}
@@ -513,7 +591,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       {/* Especiales / frutas */}
       {style === "meringue" && (
         <>
-          <CapCream color={color} topY={topY} />
+          <FullCoverCream color={color} topY={topY} />
           <Peaks topY={topY} />
         </>
       )}
@@ -521,7 +599,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
       {style === "seminaked" && <PartialCoverage topY={topY} />}
       {style === "dripcake" && (
         <>
-          <CapGanache color={color} topY={topY} />
+          <FullCoverGanache color={color} topY={topY} />
           <Drips color={color} topY={topY} long />
         </>
       )}
