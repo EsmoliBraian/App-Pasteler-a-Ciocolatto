@@ -2,20 +2,18 @@
 
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import { animated, useSpring } from "@react-spring/three";
-import { DoubleSide, type Mesh } from "three";
+import type { Group } from "three";
 import { CAKE_RADIUS } from "./constants";
 import { useCocoaDustTexture, useGanacheTexture, useRusticTexture, useSwirlCreamTexture, useSwirlSpiralTexture } from "./textures";
 
 const STYLE_COLOR: Record<string, string> = {
   meringue: "#FBF1D8",
   rustic: "#D8C6A8",
-  seminaked: "#FFFDF6",
-  dripcake: "#4A2A1D",
   selvanegra: "#FFFDF6",
   nuez: "#F3E9D2",
   franui: "#3B2418",
-  carrotcake: "#FFFDF6",
   choconutella: "#3B2418",
   chocotorta: "#B98A55",
   matilda: "#4A2A1D",
@@ -242,24 +240,6 @@ function Peaks({ topY }: { topY: number }) {
   );
 }
 
-function Drips({ color, topY, long }: { color: string; topY: number; long?: boolean }) {
-  const count = long ? 12 : 9;
-  const points = ring(count, CAKE_RADIUS * 0.99);
-  return (
-    <>
-      {points.map((p, i) => {
-        const len = long ? 0.32 + ((i * 7) % 5) * 0.05 : 0.18 + ((i * 5) % 4) * 0.04;
-        return (
-          <mesh key={i} position={[p.x, topY - len / 2 + 0.05, p.z]} castShadow>
-            <coneGeometry args={[0.09, len, 12]} />
-            <meshPhysicalMaterial color={color} roughness={0.2} clearcoat={1} clearcoatRoughness={0.2} />
-          </mesh>
-        );
-      })}
-    </>
-  );
-}
-
 /** Anillo de bolitas chicas (crocante / crumbs / perlas) alrededor del borde. */
 function SpeckRing({
   color,
@@ -409,53 +389,11 @@ function RusticCovering({ topY, color }: { topY: number; color: string }) {
   );
 }
 
-/** Cobertura parcial translúcida (semi naked / carrot cake): se ve el bizcochuelo debajo. */
-function PartialCoverage({
-  topY,
-  coverageFrac = 0.55,
-  flatness = 0.2,
-}: {
-  topY: number;
-  coverageFrac?: number;
-  flatness?: number;
-}) {
-  const coverageHeight = topY * coverageFrac;
-  return (
-    <>
-      <mesh position={[0, topY - coverageHeight / 2 + 0.06, 0]} castShadow>
-        <cylinderGeometry args={[CAKE_RADIUS * 1.07, CAKE_RADIUS * 1.07, coverageHeight, 48, 1, true]} />
-        <meshStandardMaterial color="#FFFDF6" roughness={0.7} transparent opacity={0.55} side={DoubleSide} />
-      </mesh>
-      <CapCream color="#FFFDF6" topY={topY} flatness={flatness} />
-    </>
-  );
-}
-
-/** Pila de capas finas (crepes) rematada con merengue tostado: look de Rogel. */
-function CrepeStack({ topY }: { topY: number }) {
-  const layers = 5;
-  const layerHeight = 0.055;
-  const capTopY = topY + layers * layerHeight;
-  return (
-    <>
-      {Array.from({ length: layers }).map((_, i) => (
-        <mesh key={i} position={[0, topY + i * layerHeight + layerHeight / 2, 0]} castShadow>
-          <cylinderGeometry args={[CAKE_RADIUS * 0.97, CAKE_RADIUS * 0.97, layerHeight * 0.72, 48]} />
-          <meshStandardMaterial color={i % 2 === 0 ? "#E8C687" : "#D9AE64"} roughness={0.7} />
-        </mesh>
-      ))}
-      <CapCream color="#F3E4B8" topY={capTopY} flatness={0.28} />
-      <Drips color="#A9642B" topY={capTopY + 0.02} />
-    </>
-  );
-}
-
 function CustomMarker({ topY }: { topY: number }) {
-  const sparkleRef = useRef<Mesh>(null);
+  const floatRef = useRef<Group>(null);
   useFrame((state) => {
-    if (!sparkleRef.current) return;
-    sparkleRef.current.rotation.y = state.clock.elapsedTime * 0.8;
-    sparkleRef.current.position.y = topY + 0.55 + Math.sin(state.clock.elapsedTime * 1.6) * 0.06;
+    if (!floatRef.current) return;
+    floatRef.current.position.y = topY + 0.55 + Math.sin(state.clock.elapsedTime * 1.6) * 0.07;
   });
 
   return (
@@ -464,10 +402,13 @@ function CustomMarker({ topY }: { topY: number }) {
         <torusGeometry args={[CAKE_RADIUS * 0.75, 0.02, 8, 48]} />
         <meshStandardMaterial color="#C9A24B" transparent opacity={0.55} roughness={0.4} />
       </mesh>
-      <mesh ref={sparkleRef} position={[0, topY + 0.55, 0]}>
-        <icosahedronGeometry args={[0.14, 0]} />
-        <meshStandardMaterial color="#C9A24B" emissive="#C9A24B" emissiveIntensity={0.6} roughness={0.3} />
-      </mesh>
+      <group ref={floatRef} position={[0, topY + 0.55, 0]}>
+        <Html center>
+          <div className="grid h-10 w-10 place-items-center rounded-full border-2 border-cioco-gold bg-cioco-white shadow-md">
+            <span className="font-serif text-xl font-bold text-cioco-gold">?</span>
+          </div>
+        </Html>
+      </group>
     </group>
   );
 }
@@ -522,14 +463,6 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
             roughness={0.4}
             capFlatness={DEFAULT_FLATNESS}
           />
-        </>
-      )}
-      {style === "rogel" && <CrepeStack topY={topY} />}
-      {style === "carrotcake" && (
-        <>
-          <PartialCoverage topY={topY} coverageFrac={0.5} flatness={0.2} />
-          <Dollops color="#FFFDF6" topY={topY} count={9} radiusFactor={0.85} size={0.09} capFlatness={0.2} />
-          <TopCluster colors={["#8A5A32", "#6E4423"]} topY={topY} count={6} spread={0.25} size={0.08} capFlatness={0.2} />
         </>
       )}
       {style === "choconutella" && <FullCoverGanache color={color} topY={topY} />}
@@ -593,7 +526,7 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
         </>
       )}
 
-      {/* Especiales / frutas */}
+      {/* Especiales */}
       {style === "meringue" && (
         <>
           <FullCoverCream color={color} topY={topY} />
@@ -601,13 +534,6 @@ export function DecorationMesh({ visualStyle, topY }: { visualStyle?: string | n
         </>
       )}
       {style === "rustic" && <RusticCovering topY={topY} color={color} />}
-      {style === "seminaked" && <PartialCoverage topY={topY} />}
-      {style === "dripcake" && (
-        <>
-          <FullCoverGanache color={color} topY={topY} />
-          <Drips color={color} topY={topY} long />
-        </>
-      )}
 
       {style === "custom" && <CustomMarker topY={topY} />}
     </animated.group>

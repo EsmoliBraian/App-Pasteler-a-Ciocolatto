@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Vector3 } from "three";
 
 const DIRECTION = new Vector3(2.6, 2.1, 3.6).normalize();
-const BASE_DISTANCE = 4.3;
+const BASE_DISTANCE = 4.7;
 const HEIGHT_FACTOR = 1.25;
 
 /**

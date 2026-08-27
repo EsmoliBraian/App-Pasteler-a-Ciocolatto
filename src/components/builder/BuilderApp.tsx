@@ -19,7 +19,6 @@ const CakeCanvas = dynamic(() => import("@/components/cake/CakeCanvas").then((m)
 const DECORATION_TABS: { key: string; label: string }[] = [
   { key: "CLASSIC", label: "Decoraciones clásicas" },
   { key: "SPECIAL", label: "Especiales" },
-  { key: "FRUIT", label: "Frutas" },
   { key: "CUSTOM", label: "Personalizado" },
 ];
 
@@ -139,6 +138,15 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
             </p>
           )}
           {step > 0 && step < 4 && <StepIndicator step={step} total={3} />}
+          {step > 0 && step < 5 && (
+            <button
+              type="button"
+              onClick={resetAll}
+              className="mt-3 text-xs font-medium text-cioco-green/50 underline-offset-2 hover:text-cioco-green hover:underline"
+            >
+              ↺ Reiniciar torta
+            </button>
+          )}
         </div>
 
         <div className="flex flex-col gap-5">

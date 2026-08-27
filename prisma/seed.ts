@@ -261,34 +261,6 @@ const productSeeds: ProductSeed[] = [
   },
   {
     type: "DECORATION",
-    name: "Rogel",
-    description: "Capas finas de masa con dulce de leche y merengue tostado.",
-    visualStyle: "rogel",
-    decorationCategory: "CLASSIC",
-    marginPercent: 50,
-    sortOrder: 4,
-    recipe: [
-      { ingredient: "Dulce de leche repostero", quantity: 400 },
-      { ingredient: "Huevos", quantity: 4 },
-      { ingredient: "Azúcar común", quantity: 200 },
-    ],
-  },
-  {
-    type: "DECORATION",
-    name: "Carrot Cake",
-    description: "Semi cubierta, dulces de crema y nueces por encima.",
-    visualStyle: "carrotcake",
-    decorationCategory: "CLASSIC",
-    marginPercent: 50,
-    sortOrder: 5,
-    recipe: [
-      { ingredient: "Crema de leche", quantity: 250 },
-      { ingredient: "Azúcar impalpable", quantity: 40 },
-      { ingredient: "Nueces", quantity: 80 },
-    ],
-  },
-  {
-    type: "DECORATION",
     name: "Choco-nutella",
     description: "Cobertura lisa y brillante de chocolate con nutella.",
     visualStyle: "choconutella",
@@ -408,32 +380,6 @@ const productSeeds: ProductSeed[] = [
     recipe: [
       { ingredient: "Chocolate cobertura", quantity: 200 },
       { ingredient: "Manteca", quantity: 50 },
-    ],
-  },
-  {
-    type: "DECORATION",
-    name: "Semi naked",
-    description: "Bizcochuelo a la vista con cobertura parcial.",
-    visualStyle: "seminaked",
-    decorationCategory: "SPECIAL",
-    marginPercent: 50,
-    sortOrder: 5,
-    recipe: [
-      { ingredient: "Crema de leche", quantity: 300 },
-      { ingredient: "Azúcar impalpable", quantity: 50 },
-    ],
-  },
-  {
-    type: "DECORATION",
-    name: "Drip cake",
-    description: "Cobertura con caída de chocolate sobre los bordes.",
-    visualStyle: "dripcake",
-    decorationCategory: "FRUIT",
-    marginPercent: 50,
-    sortOrder: 6,
-    recipe: [
-      { ingredient: "Chocolate cobertura", quantity: 300 },
-      { ingredient: "Crema de leche", quantity: 100 },
     ],
   },
   {

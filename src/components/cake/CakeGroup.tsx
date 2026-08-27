@@ -20,10 +20,11 @@ interface CakeGroupProps {
 }
 
 // Ángulos (rad) para repartir los callouts en abanico sin que se pisen ni se
-// corten contra el borde del canvas. El bizcochuelo (índice 0) se separa
-// fuerte del primer grupo de relleno (índice 1), que es el par que más
-// tiende a quedar a alturas parecidas.
-const CALLOUT_ANGLES = [0.25, -1.2, 0.95, -0.5, 0.1];
+// corten contra el borde del canvas. Rango acotado (no más de ~0.65 rad) para
+// que el abanico no se abra tanto en horizontal, ya que en desktop el canvas
+// es proporcionalmente más angosto (más alto en relación al ancho) que en
+// mobile y un abanico ancho se corta contra el borde.
+const CALLOUT_ANGLES = [0.2, -0.68, 0.55, -0.35, 0.08];
 
 export function CakeGroup({ sponge, fillings, decoration, spinToken, showLabels = true }: CakeGroupProps) {
   const groupRef = useRef<Group>(null);
@@ -118,7 +119,7 @@ export function CakeGroup({ sponge, fillings, decoration, spinToken, showLabels 
         callouts.map((c, i) => {
           const angle = CALLOUT_ANGLES[i % CALLOUT_ANGLES.length];
           const anchor: [number, number, number] = [Math.cos(angle) * c.radius, c.y, Math.sin(angle) * c.radius];
-          const tip: [number, number, number] = [Math.cos(angle) * (c.radius + 0.55), c.y + 0.05, Math.sin(angle) * (c.radius + 0.55)];
+          const tip: [number, number, number] = [Math.cos(angle) * (c.radius + 0.38), c.y + 0.05, Math.sin(angle) * (c.radius + 0.38)];
           return <CalloutLabel key={`callout-${i}`} anchor={anchor} tip={tip} text={c.text} />;
         })}
     </group>
