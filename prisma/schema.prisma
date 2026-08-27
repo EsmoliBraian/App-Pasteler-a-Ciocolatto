@@ -1,0 +1,220 @@
+// Ciocolatto Pastelería — modelo de datos
+//
+// Principios de diseño:
+// - Los insumos (Ingredient) tienen un costo por unidad base, calculado automáticamente
+//   a partir del precio y la cantidad de compra (nunca cargado a mano).
+// - Los productos vendibles (Product: bizcochuelo / relleno / decoración) tienen una
+//   Recipe opcional compuesta por RecipeIngredient. El costo del producto es la suma
+//   de (cantidad × costo del insumo).
+// - El precio de venta NUNCA se guarda como campo fijo: se calcula en el servidor a
+//   partir del costo + margen (Settings o override por producto) + redondeo.
+// - Quote / QuoteItem guardan una "foto" (snapshot) de nombre y precio al momento de
+//   cotizar, para que un cambio futuro de costos/márgenes no altere presupuestos ya emitidos.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+}
+
+enum ProductType {
+  SPONGE // Bizcochuelo
+  FILLING // Relleno
+  DECORATION // Decoración
+}
+
+enum DecorationCategory {
+  CLASSIC // Clásicas
+  SPECIAL // Especiales
+  FRUIT // Frutas
+  CUSTOM // Personalizado
+}
+
+// Unidad en la que el administrador compra el insumo.
+enum PurchaseUnit {
+  KILOGRAM
+  GRAM
+  LITER
+  MILLILITER
+  UNIT
+}
+
+// Unidad base a la que se normaliza el costo (para poder sumar recetas).
+enum BaseUnit {
+  GRAM
+  MILLILITER
+  UNIT
+}
+
+enum MarginMethod {
+  COST_PLUS // precio = costo * (1 + margen%)
+  MARGIN_ON_PRICE // precio = costo / (1 - margen%)
+}
+
+enum QuoteStatus {
+  PENDING
+  CONTACTED
+  CONFIRMED
+  REJECTED
+  COMPLETED
+}
+
+enum QuoteItemType {
+  SPONGE
+  FILLING
+  DECORATION
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Ingredient {
+  id       String       @id @default(cuid())
+  name     String
+  supplier String?
+  active   Boolean      @default(true)
+
+  purchaseUnit     PurchaseUnit
+  baseUnit         BaseUnit
+  purchaseQuantity Decimal      @db.Decimal(12, 3)
+  purchasePrice    Decimal      @db.Decimal(12, 2)
+
+  // Derivado automáticamente: purchasePrice / (purchaseQuantity convertida a baseUnit).
+  // Se recalcula en cada create/update, nunca se edita a mano.
+  costPerBaseUnit Decimal @db.Decimal(14, 6)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipeIngredients RecipeIngredient[]
+
+  @@index([active])
+}
+
+model Product {
+  id   String      @id @default(cuid())
+  type ProductType
+  name String
+  slug String      @unique
+
+  description String?
+
+  // Visual data-driven (sin hardcodear en componentes de UI):
+  colorHex     String? // color representativo para bizcochuelos/rellenos
+  visualStyle  String? // clave de estilo visual para decoraciones (chantilly, ganache, meringue, rustic, seminaked, dripcake, custom)
+  imageUrl     String? // foto real opcional; si no existe se usa el render vectorial
+
+  decorationCategory DecorationCategory? // solo aplica a type = DECORATION
+
+  // true para la opción "Personalizado": no tiene receta ni precio, se cotiza a mano.
+  isCustom Boolean @default(false)
+
+  // Override de margen por producto. Si es null, se usa Settings.defaultMarginPercent.
+  marginPercent Decimal? @db.Decimal(5, 2)
+
+  active    Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipe     Recipe?
+  quoteItems QuoteItem[]
+
+  @@index([type, active])
+}
+
+model Recipe {
+  id        String   @id @default(cuid())
+  productId String   @unique
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ingredients RecipeIngredient[]
+}
+
+model RecipeIngredient {
+  id           String     @id @default(cuid())
+  recipeId     String
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  // Cantidad expresada en el baseUnit del insumo (gramos, mililitros o unidades).
+  quantity Decimal @db.Decimal(12, 3)
+
+  @@unique([recipeId, ingredientId])
+}
+
+// Configuración global. Fila única (id fijo "singleton").
+model Settings {
+  id String @id @default("singleton")
+
+  businessName String  @default("Ciocolatto Pastelería")
+  logoUrl      String?
+  contactInfo  String?
+
+  whatsappNumber   String @default("")
+  whatsappGreeting String @default("Hola Ciocolatto 👋\nQuiero solicitar un presupuesto para una torta.")
+
+  defaultMarginPercent Decimal      @default(40) @db.Decimal(5, 2)
+  marginMethod         MarginMethod @default(COST_PLUS)
+  roundingIncrement    Int          @default(100) // 0 = sin redondeo
+
+  maxFillings Int @default(3)
+
+  updatedAt DateTime @updatedAt
+}
+
+model Quote {
+  id     String      @id @default(cuid())
+  status QuoteStatus @default(PENDING)
+
+  customerName  String?
+  customerPhone String?
+
+  isCustomDecoration Boolean @default(false)
+  customDescription  String?
+
+  // Snapshots numéricos calculados al momento de cotizar.
+  subtotal Decimal? @db.Decimal(10, 2)
+  total    Decimal? @db.Decimal(10, 2) // null = "a confirmar"
+
+  items QuoteItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model QuoteItem {
+  id      String        @id @default(cuid())
+  quoteId String
+  quote   Quote         @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  type    QuoteItemType
+
+  // Referencia al producto original (puede quedar null si el producto se borra),
+  // pero name/unitPrice quedan congelados como snapshot histórico.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  name      String
+  unitPrice Decimal? @db.Decimal(10, 2) // null si es personalizado / a confirmar
+  quantity  Int      @default(1)
+}

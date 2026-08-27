@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ciocolatto
+      POSTGRES_PASSWORD: ciocolatto
+      POSTGRES_DB: ciocolatto
+    ports:
+      - "5434:5432"
+    volumes:
+      - ciocolatto_db_data:/var/lib/postgresql/data
+
+volumes:
+  ciocolatto_db_data:

@@ -1,26 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f0e6;
+  --foreground: #211a12;
+
+  /* Identidad Ciocolatto */
+  --color-cioco-green: #1c4328;
+  --color-cioco-green-dark: #12301c;
+  --color-cioco-cream: #f5f0e6;
+  --color-cioco-white: #fffdf8;
+  --color-cioco-brown: #4a2a1d;
+  --color-cioco-gold: #c9a24b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-cioco-green: var(--color-cioco-green);
+  --color-cioco-green-dark: var(--color-cioco-green-dark);
+  --color-cioco-cream: var(--color-cioco-cream);
+  --color-cioco-white: var(--color-cioco-white);
+  --color-cioco-brown: var(--color-cioco-brown);
+  --color-cioco-gold: var(--color-cioco-gold);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--color-cioco-gold);
+  color: var(--color-cioco-green-dark);
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-lg border border-cioco-green/20 bg-white px-3 py-2 text-sm text-cioco-green outline-none;
+  }
+  .input:focus {
+    @apply border-cioco-green;
+  }
 }
