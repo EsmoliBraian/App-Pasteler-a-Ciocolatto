@@ -1,0 +1,9 @@
+# Nunca subir archivos .env locales al deploy: Vercel maneja las variables de
+# entorno de producción por su cuenta (dashboard/CLI env). Si estos archivos
+# viajan con el deploy, sus valores (ej. NEXTAUTH_URL=http://localhost:3000,
+# DATABASE_URL local) pisan/compiten con las variables reales de producción.
+.env
+.env.local
+.env.development
+.env.development.local
+.env.production.local
