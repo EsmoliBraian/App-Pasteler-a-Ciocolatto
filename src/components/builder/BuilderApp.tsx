@@ -17,7 +17,7 @@ const CakeCanvas = dynamic(() => import("@/components/cake/CakeCanvas").then((m)
 });
 
 const DECORATION_TABS: { key: string; label: string }[] = [
-  { key: "CLASSIC", label: "Clásicas" },
+  { key: "CLASSIC", label: "Decoraciones clásicas" },
   { key: "SPECIAL", label: "Especiales" },
   { key: "FRUIT", label: "Frutas" },
   { key: "CUSTOM", label: "Personalizado" },
@@ -230,7 +230,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
                     {decorations.filter((d) => d.decorationCategory === decorationTab).length === 0 ? (
                       <EmptyState text="No hay decoraciones disponibles en esta categoría." />
                     ) : (
-                      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div className="mt-4 flex flex-col gap-2">
                         {decorations
                           .filter((d) => d.decorationCategory === decorationTab)
                           .map((d) => (

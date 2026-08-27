@@ -9,7 +9,7 @@ recetas, márgenes y presupuestos.
 
 - **Next.js 16** (App Router, Server Actions) + **TypeScript** estricto
 - **Tailwind CSS v4** + **Framer Motion** para la UI del constructor
-- **React Three Fiber / Three.js** (+ `@react-three/drei`, `@react-spring/three`) para la torta 3D real: geometría, luces, sombras y rotación genuina en vez de CSS
+- **React Three Fiber / Three.js** (+ `@react-three/drei`, `@react-spring/three`) para la torta 3D real: geometría, luces, sombras y rotación genuina en vez de CSS. La cámara se auto-encuadra según la altura de la torta (`CameraRig.tsx`) para que nunca quede cortada, en mobile ni en desktop. El fondo de "estudio" (cortina + mesa) es 100% procedural (`StudioBackdrop.tsx`, textura generada por canvas) — no usa fotos de stock.
 - **PostgreSQL** + **Prisma ORM 7** (driver adapter `@prisma/adapter-pg`)
 - **Auth.js (NextAuth v5)** con credenciales para el admin, protegido en `proxy.ts` (middleware)
 - **Zod** para validación de todos los server actions
