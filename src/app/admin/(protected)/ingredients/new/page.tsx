@@ -7,11 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function NewIngredientPage() {
   const [providers, categories] = await Promise.all([
     prisma.provider.findMany({ orderBy: { name: "asc" } }),
-    prisma.ingredient.findMany({
-      where: { category: { not: null } },
-      distinct: ["category"],
-      select: { category: true },
-    }),
+    prisma.category.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   return (
@@ -20,7 +16,7 @@ export default async function NewIngredientPage() {
       <IngredientForm
         action={createIngredientAction}
         providers={providers.map((p) => ({ id: p.id, name: p.name }))}
-        categorySuggestions={categories.map((c) => c.category!).filter(Boolean)}
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
       />
     </div>
   );

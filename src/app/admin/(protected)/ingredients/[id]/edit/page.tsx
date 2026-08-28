@@ -10,11 +10,7 @@ export default async function EditIngredientPage({ params }: PageProps<"/admin/i
   const [ingredient, providers, categories] = await Promise.all([
     prisma.ingredient.findUnique({ where: { id } }),
     prisma.provider.findMany({ orderBy: { name: "asc" } }),
-    prisma.ingredient.findMany({
-      where: { category: { not: null } },
-      distinct: ["category"],
-      select: { category: true },
-    }),
+    prisma.category.findMany({ orderBy: { name: "asc" } }),
   ]);
   if (!ingredient) notFound();
 
@@ -26,10 +22,10 @@ export default async function EditIngredientPage({ params }: PageProps<"/admin/i
       <IngredientForm
         action={boundAction}
         providers={providers.map((p) => ({ id: p.id, name: p.name }))}
-        categorySuggestions={categories.map((c) => c.category!).filter(Boolean)}
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
         defaultValues={{
           name: ingredient.name,
-          category: ingredient.category,
+          categoryId: ingredient.categoryId,
           purchaseUnit: ingredient.purchaseUnit,
           purchasePrice: Number(ingredient.purchasePrice),
           trackStock: ingredient.trackStock,

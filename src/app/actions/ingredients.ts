@@ -14,7 +14,8 @@ export interface ActionResult {
 function parseFormData(formData: FormData) {
   return ingredientSchema.safeParse({
     name: formData.get("name"),
-    category: formData.get("category") ?? "",
+    categoryId: formData.get("categoryId") ?? "",
+    newCategoryName: formData.get("newCategoryName") ?? "",
     purchaseUnit: formData.get("purchaseUnit"),
     purchasePrice: formData.get("purchasePrice"),
     trackStock: formData.get("trackStock") === "on",
@@ -40,20 +41,46 @@ async function resolveProviderId(providerId: string | undefined, newProviderName
   return providerId && providerId.length > 0 ? providerId : null;
 }
 
+/** Resuelve la categoría final: si se cargó un nombre nuevo, lo crea (o
+ * reutiliza una existente con el mismo nombre); si no, usa la seleccionada. */
+async function resolveCategoryId(categoryId: string | undefined, newCategoryName: string | undefined) {
+  const trimmedNew = newCategoryName?.trim();
+  if (trimmedNew) {
+    const existing = await prisma.category.findFirst({
+      where: { name: { equals: trimmedNew, mode: "insensitive" } },
+    });
+    if (existing) return existing.id;
+    const created = await prisma.category.create({ data: { name: trimmedNew } });
+    return created.id;
+  }
+  return categoryId && categoryId.length > 0 ? categoryId : null;
+}
+
 export async function createIngredientAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const parsed = parseFormData(formData);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
-  const { name, category, purchaseUnit, purchasePrice, trackStock, stockQuantity, providerId, newProviderName, active } =
-    parsed.data;
+  const {
+    name,
+    categoryId,
+    newCategoryName,
+    purchaseUnit,
+    purchasePrice,
+    trackStock,
+    stockQuantity,
+    providerId,
+    newProviderName,
+    active,
+  } = parsed.data;
   const baseUnit = baseUnitForPurchaseUnit(purchaseUnit);
   const costPerBaseUnit = computeCostPerBaseUnit(purchasePrice, 1, purchaseUnit);
   const resolvedProviderId = await resolveProviderId(providerId, newProviderName);
+  const resolvedCategoryId = await resolveCategoryId(categoryId, newCategoryName);
 
   await prisma.ingredient.create({
     data: {
       name,
-      category: category || null,
+      categoryId: resolvedCategoryId,
       purchaseUnit,
       baseUnit,
       purchaseQuantity: 1,
@@ -78,17 +105,28 @@ export async function updateIngredientAction(
   const parsed = parseFormData(formData);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
-  const { name, category, purchaseUnit, purchasePrice, trackStock, stockQuantity, providerId, newProviderName, active } =
-    parsed.data;
+  const {
+    name,
+    categoryId,
+    newCategoryName,
+    purchaseUnit,
+    purchasePrice,
+    trackStock,
+    stockQuantity,
+    providerId,
+    newProviderName,
+    active,
+  } = parsed.data;
   const baseUnit = baseUnitForPurchaseUnit(purchaseUnit);
   const costPerBaseUnit = computeCostPerBaseUnit(purchasePrice, 1, purchaseUnit);
   const resolvedProviderId = await resolveProviderId(providerId, newProviderName);
+  const resolvedCategoryId = await resolveCategoryId(categoryId, newCategoryName);
 
   await prisma.ingredient.update({
     where: { id },
     data: {
       name,
-      category: category || null,
+      categoryId: resolvedCategoryId,
       purchaseUnit,
       baseUnit,
       purchaseQuantity: 1,

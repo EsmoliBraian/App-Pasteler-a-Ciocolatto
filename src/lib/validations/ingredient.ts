@@ -4,7 +4,9 @@ export const purchaseUnitEnum = z.enum(["KILOGRAM", "GRAM", "LITER", "MILLILITER
 
 export const ingredientSchema = z.object({
   name: z.string().trim().min(2, "El nombre es muy corto").max(80),
-  category: z.string().trim().max(60).optional().or(z.literal("")),
+  // Categoría: uno de los dos (elegir existente o cargar una nueva), ambos opcionales.
+  categoryId: z.string().trim().optional().or(z.literal("")),
+  newCategoryName: z.string().trim().max(60).optional().or(z.literal("")),
   purchaseUnit: purchaseUnitEnum,
   // "Costo": costo de 1 unidad de purchaseUnit.
   purchasePrice: z.coerce.number().nonnegative("No puede ser negativo"),

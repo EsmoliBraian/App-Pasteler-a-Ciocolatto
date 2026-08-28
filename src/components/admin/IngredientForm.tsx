@@ -14,14 +14,16 @@ const PURCHASE_UNIT_LABELS: Record<string, string> = {
 
 const NEW_PROVIDER_VALUE = "__new__";
 const NO_PROVIDER_VALUE = "";
+const NEW_CATEGORY_VALUE = "__new__";
+const NO_CATEGORY_VALUE = "";
 
 interface IngredientFormProps {
   action: (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
   providers: { id: string; name: string }[];
-  categorySuggestions: string[];
+  categories: { id: string; name: string }[];
   defaultValues?: {
     name: string;
-    category: string | null;
+    categoryId: string | null;
     purchaseUnit: string;
     purchasePrice: number;
     trackStock: boolean;
@@ -31,11 +33,12 @@ interface IngredientFormProps {
   };
 }
 
-export function IngredientForm({ action, providers, categorySuggestions, defaultValues }: IngredientFormProps) {
+export function IngredientForm({ action, providers, categories, defaultValues }: IngredientFormProps) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(action, { ok: false });
   const [trackStock, setTrackStock] = useState(defaultValues?.trackStock ?? false);
   const [providerChoice, setProviderChoice] = useState(defaultValues?.providerId ?? NO_PROVIDER_VALUE);
+  const [categoryChoice, setCategoryChoice] = useState(defaultValues?.categoryId ?? NO_CATEGORY_VALUE);
   const [unit, setUnit] = useState(defaultValues?.purchaseUnit ?? "KILOGRAM");
 
   useEffect(() => {
@@ -49,18 +52,28 @@ export function IngredientForm({ action, providers, categorySuggestions, default
       </Field>
 
       <Field label="Categoría (opcional)">
-        <input
-          name="category"
-          list="category-suggestions"
-          placeholder="Ej: Lácteos, Harinas, Chocolates…"
-          defaultValue={defaultValues?.category ?? ""}
-          className="input"
-        />
-        <datalist id="category-suggestions">
-          {categorySuggestions.map((c) => (
-            <option key={c} value={c} />
+        <select value={categoryChoice} onChange={(e) => setCategoryChoice(e.target.value)} className="input">
+          <option value={NO_CATEGORY_VALUE}>— Sin categoría —</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
           ))}
-        </datalist>
+          <option value={NEW_CATEGORY_VALUE}>+ Cargar categoría nueva…</option>
+        </select>
+        <input
+          type="hidden"
+          name="categoryId"
+          value={categoryChoice === NEW_CATEGORY_VALUE ? "" : categoryChoice}
+        />
+        {categoryChoice === NEW_CATEGORY_VALUE && (
+          <input
+            name="newCategoryName"
+            placeholder="Nombre de la categoría nueva"
+            className="input mt-2"
+            autoFocus
+          />
+        )}
       </Field>
 
       <div className="grid grid-cols-2 gap-4">

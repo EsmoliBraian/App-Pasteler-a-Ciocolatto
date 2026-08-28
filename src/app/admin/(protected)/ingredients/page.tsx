@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function IngredientsPage() {
   const ingredients = await prisma.ingredient.findMany({
     orderBy: { name: "asc" },
-    include: { provider: true },
+    include: { provider: true, category: true },
   });
 
   return (
@@ -26,7 +26,7 @@ export default async function IngredientsPage() {
         ingredients={ingredients.map((i) => ({
           id: i.id,
           name: i.name,
-          category: i.category,
+          categoryName: i.category?.name ?? null,
           providerName: i.provider?.name ?? null,
           purchaseUnit: i.purchaseUnit,
           purchasePrice: Number(i.purchasePrice),
