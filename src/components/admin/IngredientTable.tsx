@@ -16,11 +16,13 @@ const UNIT_LABEL: Record<string, string> = {
 export interface IngredientRow {
   id: string;
   name: string;
-  supplier: string | null;
+  category: string | null;
+  providerName: string | null;
   purchaseUnit: string;
-  purchaseQuantity: number;
   purchasePrice: number;
   costPerBaseUnit: number;
+  trackStock: boolean;
+  stockQuantity: number | null;
   active: boolean;
   updatedAt: string;
 }
@@ -47,13 +49,14 @@ export function IngredientTable({ ingredients }: { ingredients: IngredientRow[] 
 
   return (
     <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
-      <table className="w-full min-w-[720px] text-sm">
+      <table className="w-full min-w-[820px] text-sm">
         <thead>
           <tr className="border-b border-cioco-green/10 text-left text-xs uppercase tracking-wide text-cioco-green/50">
             <th className="px-4 py-3">Nombre</th>
+            <th className="px-4 py-3">Categoría</th>
             <th className="px-4 py-3">Proveedor</th>
-            <th className="px-4 py-3">Compra</th>
-            <th className="px-4 py-3">Costo unitario</th>
+            <th className="px-4 py-3">Costo</th>
+            <th className="px-4 py-3">Stock</th>
             <th className="px-4 py-3">Estado</th>
             <th className="px-4 py-3" />
           </tr>
@@ -62,13 +65,14 @@ export function IngredientTable({ ingredients }: { ingredients: IngredientRow[] 
           {ingredients.map((ing) => (
             <tr key={ing.id} className="border-b border-cioco-green/5 last:border-0 hover:bg-cioco-cream/40">
               <td className="px-4 py-3 font-medium text-cioco-green">{ing.name}</td>
-              <td className="px-4 py-3 text-cioco-green/60">{ing.supplier ?? "—"}</td>
-              <td className="px-4 py-3 text-cioco-green/70">
-                {ing.purchaseQuantity} {UNIT_LABEL[ing.purchaseUnit]?.slice(1)} — {formatARS(ing.purchasePrice)}
-              </td>
+              <td className="px-4 py-3 text-cioco-green/60">{ing.category ?? "—"}</td>
+              <td className="px-4 py-3 text-cioco-green/60">{ing.providerName ?? "—"}</td>
               <td className="px-4 py-3 font-medium text-cioco-brown">
-                {formatARS(ing.costPerBaseUnit)}
+                {formatARS(ing.purchasePrice)}
                 {UNIT_LABEL[ing.purchaseUnit]}
+              </td>
+              <td className="px-4 py-3 text-cioco-green/70">
+                {ing.trackStock ? `${ing.stockQuantity ?? 0} ${UNIT_LABEL[ing.purchaseUnit]?.slice(1)}` : "—"}
               </td>
               <td className="px-4 py-3">
                 <span

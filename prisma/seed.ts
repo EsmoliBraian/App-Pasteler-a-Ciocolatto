@@ -17,7 +17,6 @@ interface IngredientSeed {
   purchaseUnit: PurchaseUnit;
   purchaseQuantity: number;
   purchasePrice: number;
-  supplier?: string;
 }
 
 const ingredientSeeds: IngredientSeed[] = [
@@ -52,7 +51,6 @@ async function seedIngredients() {
         purchaseQuantity: seed.purchaseQuantity,
         purchasePrice: seed.purchasePrice,
         costPerBaseUnit,
-        supplier: seed.supplier,
       },
       update: {
         purchaseUnit: seed.purchaseUnit,

@@ -14,24 +14,56 @@ export interface ActionResult {
 function parseFormData(formData: FormData) {
   return ingredientSchema.safeParse({
     name: formData.get("name"),
-    supplier: formData.get("supplier") ?? "",
+    category: formData.get("category") ?? "",
     purchaseUnit: formData.get("purchaseUnit"),
-    purchaseQuantity: formData.get("purchaseQuantity"),
     purchasePrice: formData.get("purchasePrice"),
+    trackStock: formData.get("trackStock") === "on",
+    stockQuantity: formData.get("stockQuantity") || undefined,
+    providerId: formData.get("providerId") ?? "",
+    newProviderName: formData.get("newProviderName") ?? "",
     active: formData.get("active") === "on",
   });
+}
+
+/** Resuelve el proveedor final: si se cargó un nombre nuevo, lo crea (o
+ * reutiliza uno existente con el mismo nombre); si no, usa el seleccionado. */
+async function resolveProviderId(providerId: string | undefined, newProviderName: string | undefined) {
+  const trimmedNew = newProviderName?.trim();
+  if (trimmedNew) {
+    const existing = await prisma.provider.findFirst({
+      where: { name: { equals: trimmedNew, mode: "insensitive" } },
+    });
+    if (existing) return existing.id;
+    const created = await prisma.provider.create({ data: { name: trimmedNew } });
+    return created.id;
+  }
+  return providerId && providerId.length > 0 ? providerId : null;
 }
 
 export async function createIngredientAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const parsed = parseFormData(formData);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
-  const { name, supplier, purchaseUnit, purchaseQuantity, purchasePrice, active } = parsed.data;
+  const { name, category, purchaseUnit, purchasePrice, trackStock, stockQuantity, providerId, newProviderName, active } =
+    parsed.data;
   const baseUnit = baseUnitForPurchaseUnit(purchaseUnit);
-  const costPerBaseUnit = computeCostPerBaseUnit(purchasePrice, purchaseQuantity, purchaseUnit);
+  const costPerBaseUnit = computeCostPerBaseUnit(purchasePrice, 1, purchaseUnit);
+  const resolvedProviderId = await resolveProviderId(providerId, newProviderName);
 
   await prisma.ingredient.create({
-    data: { name, supplier: supplier || null, purchaseUnit, baseUnit, purchaseQuantity, purchasePrice, costPerBaseUnit, active },
+    data: {
+      name,
+      category: category || null,
+      purchaseUnit,
+      baseUnit,
+      purchaseQuantity: 1,
+      purchasePrice,
+      costPerBaseUnit,
+      trackStock,
+      stockQuantity: trackStock ? (stockQuantity ?? 0) : null,
+      providerId: resolvedProviderId,
+      active,
+    },
   });
 
   revalidatePath("/admin/ingredients");
@@ -46,13 +78,27 @@ export async function updateIngredientAction(
   const parsed = parseFormData(formData);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
 
-  const { name, supplier, purchaseUnit, purchaseQuantity, purchasePrice, active } = parsed.data;
+  const { name, category, purchaseUnit, purchasePrice, trackStock, stockQuantity, providerId, newProviderName, active } =
+    parsed.data;
   const baseUnit = baseUnitForPurchaseUnit(purchaseUnit);
-  const costPerBaseUnit = computeCostPerBaseUnit(purchasePrice, purchaseQuantity, purchaseUnit);
+  const costPerBaseUnit = computeCostPerBaseUnit(purchasePrice, 1, purchaseUnit);
+  const resolvedProviderId = await resolveProviderId(providerId, newProviderName);
 
   await prisma.ingredient.update({
     where: { id },
-    data: { name, supplier: supplier || null, purchaseUnit, baseUnit, purchaseQuantity, purchasePrice, costPerBaseUnit, active },
+    data: {
+      name,
+      category: category || null,
+      purchaseUnit,
+      baseUnit,
+      purchaseQuantity: 1,
+      purchasePrice,
+      costPerBaseUnit,
+      trackStock,
+      stockQuantity: trackStock ? (stockQuantity ?? 0) : null,
+      providerId: resolvedProviderId,
+      active,
+    },
   });
 
   const affectedRecipes = await prisma.recipeIngredient.count({ where: { ingredientId: id } });

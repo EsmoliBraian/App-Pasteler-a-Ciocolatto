@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, type ReactNode } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ActionResult } from "@/app/actions/ingredients";
 
@@ -12,21 +12,31 @@ const PURCHASE_UNIT_LABELS: Record<string, string> = {
   UNIT: "Unidad",
 };
 
+const NEW_PROVIDER_VALUE = "__new__";
+const NO_PROVIDER_VALUE = "";
+
 interface IngredientFormProps {
   action: (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
+  providers: { id: string; name: string }[];
+  categorySuggestions: string[];
   defaultValues?: {
     name: string;
-    supplier: string | null;
+    category: string | null;
     purchaseUnit: string;
-    purchaseQuantity: number;
     purchasePrice: number;
+    trackStock: boolean;
+    stockQuantity: number | null;
+    providerId: string | null;
     active: boolean;
   };
 }
 
-export function IngredientForm({ action, defaultValues }: IngredientFormProps) {
+export function IngredientForm({ action, providers, categorySuggestions, defaultValues }: IngredientFormProps) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(action, { ok: false });
+  const [trackStock, setTrackStock] = useState(defaultValues?.trackStock ?? false);
+  const [providerChoice, setProviderChoice] = useState(defaultValues?.providerId ?? NO_PROVIDER_VALUE);
+  const [unit, setUnit] = useState(defaultValues?.purchaseUnit ?? "KILOGRAM");
 
   useEffect(() => {
     if (state.ok) router.push("/admin/ingredients");
@@ -38,13 +48,24 @@ export function IngredientForm({ action, defaultValues }: IngredientFormProps) {
         <input name="name" required defaultValue={defaultValues?.name} className="input" />
       </Field>
 
-      <Field label="Proveedor (opcional)">
-        <input name="supplier" defaultValue={defaultValues?.supplier ?? ""} className="input" />
+      <Field label="Categoría (opcional)">
+        <input
+          name="category"
+          list="category-suggestions"
+          placeholder="Ej: Lácteos, Harinas, Chocolates…"
+          defaultValue={defaultValues?.category ?? ""}
+          className="input"
+        />
+        <datalist id="category-suggestions">
+          {categorySuggestions.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
       </Field>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Unidad de compra">
-          <select name="purchaseUnit" defaultValue={defaultValues?.purchaseUnit ?? "KILOGRAM"} className="input">
+        <Field label="Unidad">
+          <select name="purchaseUnit" value={unit} onChange={(e) => setUnit(e.target.value)} className="input">
             {Object.entries(PURCHASE_UNIT_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -52,30 +73,66 @@ export function IngredientForm({ action, defaultValues }: IngredientFormProps) {
             ))}
           </select>
         </Field>
-        <Field label="Cantidad comprada">
+        <Field label={`Costo ($ por ${PURCHASE_UNIT_LABELS[unit]?.match(/\((.*)\)/)?.[1] ?? "unidad"})`}>
           <input
-            name="purchaseQuantity"
+            name="purchasePrice"
             type="number"
             step="0.01"
             min="0"
             required
-            defaultValue={defaultValues?.purchaseQuantity}
+            defaultValue={defaultValues?.purchasePrice}
             className="input"
           />
         </Field>
       </div>
 
-      <Field label="Precio de compra ($)">
-        <input
-          name="purchasePrice"
-          type="number"
-          step="0.01"
-          min="0"
-          required
-          defaultValue={defaultValues?.purchasePrice}
+      <Field label="Proveedor (opcional)">
+        <select
+          value={providerChoice}
+          onChange={(e) => setProviderChoice(e.target.value)}
           className="input"
+        >
+          <option value={NO_PROVIDER_VALUE}>— Sin proveedor —</option>
+          {providers.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+          <option value={NEW_PROVIDER_VALUE}>+ Cargar proveedor nuevo…</option>
+        </select>
+        <input
+          type="hidden"
+          name="providerId"
+          value={providerChoice === NEW_PROVIDER_VALUE ? "" : providerChoice}
         />
+        {providerChoice === NEW_PROVIDER_VALUE && (
+          <input name="newProviderName" placeholder="Nombre del proveedor nuevo" className="input mt-2" autoFocus />
+        )}
       </Field>
+
+      <div className="rounded-xl border border-cioco-green/15 p-3">
+        <label className="flex items-center gap-2 text-sm text-cioco-green">
+          <input
+            type="checkbox"
+            name="trackStock"
+            checked={trackStock}
+            onChange={(e) => setTrackStock(e.target.checked)}
+          />
+          Controlar stock de este insumo
+        </label>
+        {trackStock && (
+          <Field label={`Stock actual (${PURCHASE_UNIT_LABELS[unit]?.match(/\((.*)\)/)?.[1] ?? "unidad"})`}>
+            <input
+              name="stockQuantity"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={defaultValues?.stockQuantity ?? 0}
+              className="input mt-2"
+            />
+          </Field>
+        )}
+      </div>
 
       <label className="flex items-center gap-2 text-sm text-cioco-green">
         <input type="checkbox" name="active" defaultChecked={defaultValues?.active ?? true} />

@@ -5,7 +5,10 @@ import { IngredientTable } from "@/components/admin/IngredientTable";
 export const dynamic = "force-dynamic";
 
 export default async function IngredientsPage() {
-  const ingredients = await prisma.ingredient.findMany({ orderBy: { name: "asc" } });
+  const ingredients = await prisma.ingredient.findMany({
+    orderBy: { name: "asc" },
+    include: { provider: true },
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,11 +26,13 @@ export default async function IngredientsPage() {
         ingredients={ingredients.map((i) => ({
           id: i.id,
           name: i.name,
-          supplier: i.supplier,
+          category: i.category,
+          providerName: i.provider?.name ?? null,
           purchaseUnit: i.purchaseUnit,
-          purchaseQuantity: Number(i.purchaseQuantity),
           purchasePrice: Number(i.purchasePrice),
           costPerBaseUnit: Number(i.costPerBaseUnit),
+          trackStock: i.trackStock,
+          stockQuantity: i.stockQuantity !== null ? Number(i.stockQuantity) : null,
           active: i.active,
           updatedAt: i.updatedAt.toISOString(),
         }))}
