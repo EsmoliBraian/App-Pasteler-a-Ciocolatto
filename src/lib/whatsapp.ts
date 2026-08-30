@@ -3,9 +3,11 @@ import { formatARS } from "@/lib/pricing";
 
 export interface WhatsappQuoteData {
   greeting: string;
+  sizeName: string;
   spongeName: string;
   spongePrice: number;
   fillings: { name: string; price: number }[];
+  toppings: { name: string; price: number }[];
   isCustomDecoration: boolean;
   decorationName?: string;
   decorationPrice?: number;
@@ -19,6 +21,9 @@ export function buildWhatsappMessage(data: WhatsappQuoteData): string {
   lines.push(data.greeting.trim());
   lines.push("");
   lines.push("🎂 TORTA");
+  lines.push("Medida:");
+  lines.push(data.sizeName);
+  lines.push("");
   lines.push("Bizcochuelo:");
   lines.push(`${data.spongeName} — ${formatARS(data.spongePrice)}`);
   lines.push("");
@@ -27,6 +32,14 @@ export function buildWhatsappMessage(data: WhatsappQuoteData): string {
     lines.push(`• ${filling.name} — ${formatARS(filling.price)}`);
   }
   lines.push("");
+
+  if (data.toppings.length > 0) {
+    lines.push("Toppings:");
+    for (const topping of data.toppings) {
+      lines.push(`• ${topping.name} — ${formatARS(topping.price)}`);
+    }
+    lines.push("");
+  }
 
   if (data.isCustomDecoration) {
     lines.push("Decoración:");

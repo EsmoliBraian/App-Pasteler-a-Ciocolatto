@@ -124,7 +124,7 @@ function PricingForm({ settings }: { settings: PlainSettings }) {
         <input
           name="defaultMarginPercent"
           type="number"
-          step="0.1"
+          step="any"
           min="0"
           defaultValue={Number(settings.defaultMarginPercent)}
           required

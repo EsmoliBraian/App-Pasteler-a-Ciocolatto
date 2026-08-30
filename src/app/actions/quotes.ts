@@ -25,18 +25,30 @@ export async function createQuoteAction(input: CreateQuoteInput): Promise<Create
     return { ok: false, error: `Podés elegir hasta ${settings.maxFillings} rellenos` };
   }
 
-  const sponge = await getProductWithBreakdownById(data.spongeId);
+  const size = await prisma.size.findUnique({ where: { id: data.sizeId } });
+  if (!size || !size.active) {
+    return { ok: false, error: "La medida elegida no está disponible" };
+  }
+  const multiplier = Number(size.multiplier);
+
+  const sponge = await getProductWithBreakdownById(data.spongeId, multiplier);
   if (!sponge || sponge.type !== "SPONGE" || sponge.price === null) {
     return { ok: false, error: "El bizcochuelo elegido no está disponible" };
   }
 
-  const fillings = await Promise.all(data.fillingIds.map((id) => getProductWithBreakdownById(id)));
+  const fillings = await Promise.all(data.fillingIds.map((id) => getProductWithBreakdownById(id, multiplier)));
   if (fillings.some((f) => !f || f.type !== "FILLING" || f.price === null)) {
     return { ok: false, error: "Alguno de los rellenos elegidos no está disponible" };
   }
   const validFillings = fillings as NonNullable<(typeof fillings)[number]>[];
 
-  const decoration = await getProductWithBreakdownById(data.decorationId);
+  const toppings = await Promise.all(data.toppingIds.map((id) => getProductWithBreakdownById(id, multiplier)));
+  if (toppings.some((t) => !t || t.type !== "TOPPING" || t.price === null)) {
+    return { ok: false, error: "Alguno de los toppings elegidos no está disponible" };
+  }
+  const validToppings = toppings as NonNullable<(typeof toppings)[number]>[];
+
+  const decoration = await getProductWithBreakdownById(data.decorationId, multiplier);
   if (!decoration || decoration.type !== "DECORATION") {
     return { ok: false, error: "La decoración elegida no está disponible" };
   }
@@ -47,13 +59,19 @@ export async function createQuoteAction(input: CreateQuoteInput): Promise<Create
   }
 
   const subtotal =
-    sponge.price + validFillings.reduce((sum, f) => sum + (f.price ?? 0), 0) + (decoration.price ?? 0);
+    sponge.price +
+    validFillings.reduce((sum, f) => sum + (f.price ?? 0), 0) +
+    validToppings.reduce((sum, t) => sum + (t.price ?? 0), 0) +
+    (decoration.price ?? 0);
   const total = isCustomDecoration ? null : subtotal;
 
   const quote = await prisma.quote.create({
     data: {
       customerName: data.customerName || null,
       customerPhone: data.customerPhone || null,
+      sizeId: size.id,
+      sizeName: size.name,
+      sizeMultiplier: size.multiplier,
       isCustomDecoration,
       customDescription: isCustomDecoration ? data.customDescription : null,
       subtotal: isCustomDecoration ? null : subtotal,
@@ -66,6 +84,12 @@ export async function createQuoteAction(input: CreateQuoteInput): Promise<Create
             productId: f.id,
             name: f.name,
             unitPrice: f.price,
+          })),
+          ...validToppings.map((t) => ({
+            type: "TOPPING" as const,
+            productId: t.id,
+            name: t.name,
+            unitPrice: t.price,
           })),
           {
             type: "DECORATION",
@@ -80,9 +104,11 @@ export async function createQuoteAction(input: CreateQuoteInput): Promise<Create
 
   const message = buildWhatsappMessage({
     greeting: settings.whatsappGreeting,
+    sizeName: size.name,
     spongeName: sponge.name,
     spongePrice: sponge.price,
     fillings: validFillings.map((f) => ({ name: f.name, price: f.price ?? 0 })),
+    toppings: validToppings.map((t) => ({ name: t.name, price: t.price ?? 0 })),
     isCustomDecoration,
     decorationName: decoration.name,
     decorationPrice: decoration.price ?? 0,

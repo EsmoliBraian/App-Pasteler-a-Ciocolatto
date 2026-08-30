@@ -9,7 +9,7 @@ import { PriceDisplay } from "@/components/builder/PriceDisplay";
 import { NavigationButtons } from "@/components/builder/NavigationButtons";
 import { formatARS } from "@/lib/pricing";
 import { createQuoteAction } from "@/app/actions/quotes";
-import type { BuilderData, FillingOption } from "@/lib/types";
+import type { BuilderData, FillingOption, PublicProduct } from "@/lib/types";
 
 const CakeCanvas = dynamic(() => import("@/components/cake/CakeCanvas").then((m) => m.CakeCanvas), {
   ssr: false,
@@ -22,14 +22,17 @@ const DECORATION_TABS: { key: string; label: string }[] = [
   { key: "CUSTOM", label: "Personalizado" },
 ];
 
-type Step = 0 | 1 | 2 | 3 | 4 | 5;
+type Step = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+const TOTAL_STEPS = 5; // Medidas, Bizcochuelo, Rellenos, Toppings, Decoración
 
-export function BuilderApp({ sponges, fillings, decorations, maxFillings }: BuilderData) {
+export function BuilderApp({ sizes, sponges, fillings, toppings, decorations, maxFillings }: BuilderData) {
   const [step, setStep] = useState<Step>(0);
   const [spinToken, setSpinToken] = useState(0);
 
+  const [sizeId, setSizeId] = useState<string | null>(null);
   const [spongeId, setSpongeId] = useState<string | null>(null);
   const [fillingIds, setFillingIds] = useState<string[]>([]);
+  const [toppingIds, setToppingIds] = useState<string[]>([]);
   const [decorationId, setDecorationId] = useState<string | null>(null);
   const [decorationTab, setDecorationTab] = useState("CLASSIC");
   const [customDescription, setCustomDescription] = useState("");
@@ -38,6 +41,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
   const [error, setError] = useState<string | null>(null);
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
 
+  const selectedSize = useMemo(() => sizes.find((s) => s.id === sizeId) ?? null, [sizes, sizeId]);
   const selectedSponge = useMemo(() => sponges.find((s) => s.id === spongeId) ?? null, [sponges, spongeId]);
   // Se mapea (no se filtra) para preservar el orden y permitir el mismo relleno en varias capas.
   const selectedFillings = useMemo(
@@ -47,16 +51,26 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
         .filter((f): f is FillingOption => Boolean(f)),
     [fillings, fillingIds]
   );
+  const selectedToppings = useMemo(
+    () => toppings.filter((t) => toppingIds.includes(t.id)),
+    [toppings, toppingIds]
+  );
   const selectedDecoration = useMemo(
     () => decorations.find((d) => d.id === decorationId) ?? null,
     [decorations, decorationId]
   );
   const customProduct = useMemo(() => decorations.find((d) => d.isCustom) ?? null, [decorations]);
 
+  function priceFor(product: Pick<PublicProduct, "pricesBySize"> | null): number | null {
+    if (!product || !sizeId) return null;
+    return product.pricesBySize[sizeId] ?? null;
+  }
+
   const runningTotal =
-    (selectedSponge?.price ?? 0) +
-    selectedFillings.reduce((sum, f) => sum + (f.price ?? 0), 0) +
-    (selectedDecoration && !selectedDecoration.isCustom ? (selectedDecoration.price ?? 0) : 0);
+    (priceFor(selectedSponge) ?? 0) +
+    selectedFillings.reduce((sum, f) => sum + (priceFor(f) ?? 0), 0) +
+    selectedToppings.reduce((sum, t) => sum + (priceFor(t) ?? 0), 0) +
+    (selectedDecoration && !selectedDecoration.isCustom ? (priceFor(selectedDecoration) ?? 0) : 0);
 
   const finalTotal = selectedDecoration?.isCustom ? null : runningTotal;
 
@@ -68,7 +82,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
   function setLayerCount(count: number) {
     setFillingIds((prev) => {
       const next = prev.slice(0, count);
-      while (next.length < count) next.push(fillings[0]?.id ?? "");
+      while (next.length < count) next.push("");
       return next;
     });
   }
@@ -81,6 +95,10 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
     });
   }
 
+  function toggleTopping(id: string) {
+    setToppingIds((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+  }
+
   function selectDecorationTab(tabKey: string) {
     setDecorationTab(tabKey);
     if (tabKey === "CUSTOM" && customProduct) {
@@ -91,12 +109,14 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
   }
 
   async function handleSend() {
-    if (!selectedSponge || !selectedDecoration) return;
+    if (!sizeId || !selectedSponge || !selectedDecoration) return;
     setSubmitting(true);
     setError(null);
     const result = await createQuoteAction({
+      sizeId,
       spongeId: selectedSponge.id,
       fillingIds,
+      toppingIds,
       decorationId: selectedDecoration.id,
       customDescription: selectedDecoration.isCustom ? customDescription : undefined,
     });
@@ -108,12 +128,14 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
     }
     setWhatsappUrl(result.whatsappUrl);
     window.open(result.whatsappUrl, "_blank", "noopener,noreferrer");
-    goTo(5);
+    goTo(7);
   }
 
   function resetAll() {
+    setSizeId(null);
     setSpongeId(null);
     setFillingIds([]);
+    setToppingIds([]);
     setDecorationId(null);
     setDecorationTab("CLASSIC");
     setCustomDescription("");
@@ -137,8 +159,8 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
               real puede variar en su terminación.
             </p>
           )}
-          {step > 0 && step < 4 && <StepIndicator step={step} total={3} />}
-          {step > 0 && step < 5 && (
+          {step > 0 && step < TOTAL_STEPS + 1 && <StepIndicator step={step} total={TOTAL_STEPS} />}
+          {step > 0 && step < 7 && (
             <button
               type="button"
               onClick={resetAll}
@@ -171,6 +193,28 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
             )}
 
             {step === 1 && (
+              <StepPanel key="size">
+                <h2 className="font-serif text-xl text-cioco-brown">¿Para cuántas personas es la torta?</h2>
+                <p className="mt-1 text-sm text-cioco-green/60">Esto define el tamaño y el precio final.</p>
+                {sizes.length === 0 ? (
+                  <EmptyState text="No hay medidas disponibles actualmente." />
+                ) : (
+                  <div className="mt-4 flex flex-col gap-2">
+                    {sizes.map((s) => (
+                      <OptionCard
+                        key={s.id}
+                        name={s.name}
+                        colorHex="#EADFC0"
+                        selected={sizeId === s.id}
+                        onClick={() => setSizeId(s.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </StepPanel>
+            )}
+
+            {step === 2 && (
               <StepPanel key="sponge">
                 <h2 className="font-serif text-xl text-cioco-brown">¿Qué bizcochuelo preferís?</h2>
                 {sponges.length === 0 ? (
@@ -181,7 +225,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
                       <OptionCard
                         key={s.id}
                         name={s.name}
-                        price={s.price}
+                        price={priceFor(s)}
                         colorHex={s.colorHex}
                         selected={spongeId === s.id}
                         onClick={() => setSpongeId(s.id)}
@@ -192,7 +236,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
               </StepPanel>
             )}
 
-            {step === 2 && (
+            {step === 3 && (
               <StepPanel key="filling">
                 <h2 className="font-serif text-xl text-cioco-brown">¿Qué rellenos preferís?</h2>
                 <p className="mt-1 text-sm text-cioco-green/60">
@@ -220,37 +264,51 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
                     </div>
 
                     {fillingIds.length > 0 && (
-                      <div className="mt-4 flex flex-col gap-2">
+                      <div className="mt-4 flex flex-col gap-3">
                         {fillingIds.map((id, i) => {
-                          const current = fillings.find((f) => f.id === id);
+                          const current = fillings.find((f) => f.id === id) ?? null;
                           return (
-                            <div
-                              key={i}
-                              className="flex items-center gap-3 rounded-2xl border-2 border-transparent bg-cioco-white px-4 py-3 shadow-sm"
-                            >
-                              <span
-                                className="h-9 w-9 shrink-0 rounded-full border border-black/10"
-                                style={{ backgroundColor: current?.colorHex ?? "#EADFC0" }}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <span className="block text-[10px] font-semibold uppercase tracking-wide text-cioco-green/50">
-                                  Capa {i + 1}
-                                </span>
+                            <div key={i} className="flex flex-col gap-1">
+                              <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-cioco-green/50">
+                                Capa {i + 1}
+                              </span>
+                              {current ? (
+                                <div className="flex items-center gap-3 rounded-2xl border-2 border-transparent bg-cioco-white px-4 py-3 shadow-sm">
+                                  <span
+                                    className="h-9 w-9 shrink-0 rounded-full border border-black/10"
+                                    style={{ backgroundColor: current.colorHex ?? "#EADFC0" }}
+                                  />
+                                  <select
+                                    value={id}
+                                    onChange={(e) => updateFillingLayer(i, e.target.value)}
+                                    className="min-w-0 flex-1 truncate bg-transparent text-sm font-medium text-cioco-green outline-none"
+                                  >
+                                    {fillings.map((f) => (
+                                      <option key={f.id} value={f.id}>
+                                        {f.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <span className="shrink-0 text-sm font-semibold text-cioco-brown">
+                                    {formatARS(priceFor(current))}
+                                  </span>
+                                </div>
+                              ) : (
                                 <select
-                                  value={id}
+                                  value=""
                                   onChange={(e) => updateFillingLayer(i, e.target.value)}
-                                  className="w-full truncate bg-transparent text-sm font-medium text-cioco-green outline-none"
+                                  className="w-full cursor-pointer appearance-none rounded-full border-2 border-dashed border-cioco-green/30 bg-transparent px-5 py-3 text-center text-sm font-medium text-cioco-green/50 outline-none transition hover:border-cioco-green/50 hover:text-cioco-green/70"
                                 >
+                                  <option value="" disabled hidden>
+                                    · · · Elegir rellenos
+                                  </option>
                                   {fillings.map((f) => (
                                     <option key={f.id} value={f.id}>
                                       {f.name}
                                     </option>
                                   ))}
                                 </select>
-                              </div>
-                              <span className="shrink-0 text-sm font-semibold text-cioco-brown">
-                                {formatARS(current?.price ?? null)}
-                              </span>
+                              )}
                             </div>
                           );
                         })}
@@ -261,7 +319,32 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
               </StepPanel>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
+              <StepPanel key="topping">
+                <h2 className="font-serif text-xl text-cioco-brown">¿Sumamos algún topping?</h2>
+                <p className="mt-1 text-sm text-cioco-green/60">Opcional — podés elegir más de uno o ninguno.</p>
+                {toppings.length === 0 ? (
+                  <EmptyState text="No hay toppings disponibles actualmente." />
+                ) : (
+                  <div className="mt-4 flex flex-col gap-2">
+                    {toppings.map((t) => (
+                      <OptionCard
+                        key={t.id}
+                        name={t.name}
+                        price={priceFor(t)}
+                        description={t.description}
+                        colorHex={t.colorHex}
+                        selected={toppingIds.includes(t.id)}
+                        multi
+                        onClick={() => toggleTopping(t.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </StepPanel>
+            )}
+
+            {step === 5 && (
               <StepPanel key="decoration">
                 <h2 className="font-serif text-xl text-cioco-brown">¿Cómo la querés decorar?</h2>
                 <div className="mt-3 flex gap-1 overflow-x-auto rounded-full bg-cioco-green/10 p-1">
@@ -307,7 +390,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
                             <OptionCard
                               key={d.id}
                               name={d.name}
-                              price={d.price}
+                              price={priceFor(d)}
                               description={d.description}
                               colorHex="#EADFC0"
                               selected={decorationId === d.id}
@@ -321,11 +404,17 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
               </StepPanel>
             )}
 
-            {step === 4 && selectedSponge && selectedDecoration && (
+            {step === 6 && selectedSponge && selectedDecoration && (
               <StepPanel key="summary">
                 <h2 className="font-serif text-xl text-cioco-brown">Resumen de tu torta</h2>
                 <div className="mt-4 divide-y divide-cioco-green/10 rounded-2xl bg-cioco-white p-4 shadow-sm">
-                  <SummaryRow label="Bizcochuelo" name={selectedSponge.name} price={selectedSponge.price} />
+                  {selectedSize && (
+                    <div className="py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-cioco-green/50">Medida</p>
+                      <p className="mt-1 text-sm text-cioco-green">{selectedSize.name}</p>
+                    </div>
+                  )}
+                  <SummaryRow label="Bizcochuelo" name={selectedSponge.name} price={priceFor(selectedSponge)} />
                   <div className="py-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-cioco-green/50">
                       Rellenos
@@ -333,10 +422,23 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
                     {selectedFillings.map((f, i) => (
                       <div key={`${f.id}-${i}`} className="mt-1 flex items-center justify-between text-sm">
                         <span className="text-cioco-green">{f.name}</span>
-                        <span className="font-medium text-cioco-brown">{formatARS(f.price)}</span>
+                        <span className="font-medium text-cioco-brown">{formatARS(priceFor(f))}</span>
                       </div>
                     ))}
                   </div>
+                  {selectedToppings.length > 0 && (
+                    <div className="py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-cioco-green/50">
+                        Toppings
+                      </p>
+                      {selectedToppings.map((t) => (
+                        <div key={t.id} className="mt-1 flex items-center justify-between text-sm">
+                          <span className="text-cioco-green">{t.name}</span>
+                          <span className="font-medium text-cioco-brown">{formatARS(priceFor(t))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {selectedDecoration.isCustom ? (
                     <div className="py-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-cioco-green/50">
@@ -346,7 +448,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
                       <p className="mt-1 text-sm italic text-cioco-green/70">“{customDescription}”</p>
                     </div>
                   ) : (
-                    <SummaryRow label="Decoración" name={selectedDecoration.name} price={selectedDecoration.price} />
+                    <SummaryRow label="Decoración" name={selectedDecoration.name} price={priceFor(selectedDecoration)} />
                   )}
                   <div className="flex items-center justify-between pt-3">
                     <span className="font-semibold text-cioco-green">Total</span>
@@ -357,7 +459,7 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
               </StepPanel>
             )}
 
-            {step === 5 && (
+            {step === 7 && (
               <StepPanel key="success">
                 <div className="grid h-14 w-14 place-items-center rounded-full bg-cioco-green text-2xl text-white">
                   ✓
@@ -385,28 +487,29 @@ export function BuilderApp({ sponges, fillings, decorations, maxFillings }: Buil
             )}
           </AnimatePresence>
 
-          {step > 0 && step < 5 && (
+          {step > 0 && step < 7 && (
             <div className="sticky bottom-0 mt-2 flex flex-col gap-3 rounded-2xl bg-cioco-cream/95 pb-1 pt-2 backdrop-blur">
-              <PriceDisplay price={finalTotal} label={step === 4 ? "Total" : "Vas llevando"} />
+              <PriceDisplay price={finalTotal} label={step === 6 ? "Total" : "Vas llevando"} />
               <NavigationButtons
                 onBack={step > 1 ? () => goTo((step - 1) as Step) : undefined}
-                continueLabel={step === 4 ? "Enviar por WhatsApp" : "Continuar"}
-                loading={step === 4 ? submitting : false}
+                continueLabel={step === 6 ? "Enviar por WhatsApp" : "Continuar"}
+                loading={step === 6 ? submitting : false}
                 continueDisabled={
-                  (step === 1 && !spongeId) ||
-                  (step === 2 && fillingIds.length === 0) ||
-                  (step === 3 &&
+                  (step === 1 && !sizeId) ||
+                  (step === 2 && !spongeId) ||
+                  (step === 3 && (fillingIds.length === 0 || fillingIds.some((id) => !id))) ||
+                  (step === 5 &&
                     (!decorationId || (selectedDecoration?.isCustom && customDescription.trim().length === 0)))
                 }
                 onContinue={
-                  step === 4
+                  step === 6
                     ? handleSend
                     : () => goTo((step + 1) as Step)
                 }
               />
-              {step === 4 && (
+              {step === 6 && (
                 <button
-                  onClick={() => goTo(3)}
+                  onClick={() => goTo(5)}
                   className="text-center text-xs font-medium text-cioco-green/60 hover:text-cioco-green"
                 >
                   ← Volver a editar

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const productTypeEnum = z.enum(["SPONGE", "FILLING", "DECORATION"]);
+export const productTypeEnum = z.enum(["SPONGE", "FILLING", "TOPPING", "DECORATION"]);
 export const decorationCategoryEnum = z.enum(["CLASSIC", "SPECIAL", "FRUIT", "CUSTOM"]);
 
 export const recipeIngredientSchema = z.object({

@@ -52,6 +52,7 @@ function pathsForType(type: ProductType): string[] {
   const map: Record<ProductType, string> = {
     SPONGE: "/admin/products/sponges",
     FILLING: "/admin/products/fillings",
+    TOPPING: "/admin/products/toppings",
     DECORATION: "/admin/products/decorations",
   };
   return [map[type], "/"];

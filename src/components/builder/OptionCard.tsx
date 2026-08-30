@@ -5,7 +5,8 @@ import { formatARS } from "@/lib/pricing";
 
 interface OptionCardProps {
   name: string;
-  price: number | null;
+  /** undefined oculta el precio por completo (ej: la torta aún no tiene un costo definido en este paso). */
+  price?: number | null;
   description?: string | null;
   colorHex?: string | null;
   selected: boolean;
@@ -45,7 +46,9 @@ export function OptionCard({
         <span className="block truncate font-medium text-cioco-green">{name}</span>
         {description && <span className="block truncate text-xs text-cioco-green/60">{description}</span>}
       </span>
-      <span className="shrink-0 text-sm font-semibold text-cioco-brown">{formatARS(price)}</span>
+      {price !== undefined && (
+        <span className="shrink-0 text-sm font-semibold text-cioco-brown">{formatARS(price)}</span>
+      )}
       <span
         className={`ml-1 grid h-5 w-5 shrink-0 place-items-center border text-[11px] text-white ${
           multi ? "rounded-md" : "rounded-full"

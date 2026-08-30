@@ -145,7 +145,7 @@ export function ProductForm({
           <input
             name="marginPercent"
             type="number"
-            step="0.1"
+            step="any"
             min="0"
             value={marginOverride}
             onChange={(e) => setMarginOverride(e.target.value)}

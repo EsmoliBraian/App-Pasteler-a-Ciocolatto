@@ -8,8 +8,10 @@ import { logoutAction } from "@/app/actions/auth";
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: "🏠" },
   { href: "/admin/ingredients", label: "Insumos", icon: "🧺" },
+  { href: "/admin/sizes", label: "Medidas", icon: "📏" },
   { href: "/admin/products/sponges", label: "Bizcochuelos", icon: "🍰" },
   { href: "/admin/products/fillings", label: "Rellenos", icon: "🍯" },
+  { href: "/admin/products/toppings", label: "Toppings", icon: "🍬" },
   { href: "/admin/products/decorations", label: "Decoraciones", icon: "🎀" },
   { href: "/admin/quotes", label: "Presupuestos", icon: "🧾" },
   { href: "/admin/settings", label: "Configuración", icon: "⚙️" },

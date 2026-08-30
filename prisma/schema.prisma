@@ -26,6 +26,7 @@ enum Role {
 enum ProductType {
   SPONGE // Bizcochuelo
   FILLING // Relleno
+  TOPPING // Topping opcional (merenguitos, oreos, etc.)
   DECORATION // Decoración
 }
 
@@ -68,6 +69,7 @@ enum QuoteStatus {
 enum QuoteItemType {
   SPONGE
   FILLING
+  TOPPING
   DECORATION
 }
 
@@ -133,6 +135,22 @@ model Ingredient {
   recipeIngredients RecipeIngredient[]
 
   @@index([active])
+}
+
+// Tamaños de torta ("Hasta 10 personas", etc). El multiplier se aplica al
+// costo de insumos de bizcochuelo+rellenos+toppings+decoración ANTES de
+// calcular el margen, para escalar el precio según la cantidad de porciones.
+model Size {
+  id         String   @id @default(cuid())
+  name       String
+  // Fracción del costo de insumos de la receta base (1 = costo completo).
+  multiplier Decimal  @db.Decimal(6, 4)
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  quotes Quote[]
 }
 
 model Product {
@@ -217,6 +235,12 @@ model Quote {
 
   customerName  String?
   customerPhone String?
+
+  // Snapshot del tamaño elegido (por si el admin edita/borra el Size a futuro).
+  sizeId         String?
+  size           Size?    @relation(fields: [sizeId], references: [id], onDelete: SetNull)
+  sizeName       String?
+  sizeMultiplier Decimal? @db.Decimal(6, 4)
 
   isCustomDecoration Boolean @default(false)
   customDescription  String?

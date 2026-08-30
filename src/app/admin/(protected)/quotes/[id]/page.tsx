@@ -14,6 +14,7 @@ export default async function QuoteDetailPage({ params }: PageProps<"/admin/quot
 
   const sponge = quote.items.find((i) => i.type === "SPONGE");
   const fillings = quote.items.filter((i) => i.type === "FILLING");
+  const toppings = quote.items.filter((i) => i.type === "TOPPING");
   const decoration = quote.items.find((i) => i.type === "DECORATION");
 
   return (
@@ -32,6 +33,12 @@ export default async function QuoteDetailPage({ params }: PageProps<"/admin/quot
       </div>
 
       <div className="divide-y divide-cioco-green/10 rounded-2xl bg-white p-5 shadow-sm">
+        {quote.sizeName && (
+          <div className="py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-cioco-green/50">Medida</p>
+            <p className="mt-1 text-sm text-cioco-green">{quote.sizeName}</p>
+          </div>
+        )}
         {sponge && (
           <Row label="Bizcochuelo">
             <span>{sponge.name}</span>
@@ -48,6 +55,18 @@ export default async function QuoteDetailPage({ params }: PageProps<"/admin/quot
             </div>
           ))}
         </div>
+
+        {toppings.length > 0 && (
+          <div className="py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-cioco-green/50">Toppings</p>
+            {toppings.map((t) => (
+              <div key={t.id} className="mt-1 flex items-center justify-between text-sm">
+                <span className="text-cioco-green">{t.name}</span>
+                <span className="font-medium text-cioco-brown">{formatARS(t.unitPrice ? Number(t.unitPrice) : null)}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {decoration && (
           <div className="py-3">
